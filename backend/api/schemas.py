@@ -148,6 +148,7 @@ class Template(BaseModel):
 class SubmitIn(BaseModel):
     problem_id: str
     dim: int
+    contest_id: int | None = None
     code: str = Field(min_length=1)
 
 
@@ -177,6 +178,7 @@ class SubmissionOut(Model):
     user_name: str
     problem_id: str
     dim: int
+    contest_id: int | None
     status: str
     error: str
     budget: int | None
@@ -245,3 +247,81 @@ class ActiveIn(BaseModel):
 
 class BaselinesIn(BaseModel):
     dim: int
+
+
+# --- contests and courses ---------------------------------------------------------------
+
+
+class Task(BaseModel):
+    problem_id: str
+    dim: int
+
+
+class ContestIn(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    description: str = Field(default="", max_length=5000)
+    tasks: list[Task] = Field(min_length=1, max_length=20)
+    starts_at: datetime
+    ends_at: datetime
+    invite_only: bool = False
+    course_id: int | None = None
+
+
+class ContestOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    tasks: list[Task]
+    starts_at: datetime
+    ends_at: datetime
+    phase: str  # upcoming | running | ended | finalising | final
+    invite_only: bool
+    course_id: int | None
+    participants: int
+    joined: bool
+    can_manage: bool
+    invite_code: str | None  # organiser only
+
+
+class JoinIn(BaseModel):
+    code: str = Field(default="", max_length=40)
+
+
+class ContestBoardRow(BaseModel):
+    rank: int
+    user_id: int
+    name: str
+    is_baseline: bool
+    total: float
+    scores: dict[str, float]  # "problem@dim" -> score
+    final: bool  # True: scores are from held-out instances
+
+
+class CourseIn(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    description: str = Field(default="", max_length=5000)
+
+
+class CourseOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    instructor: str
+    students: int
+    teaches: bool
+    invite_code: str | None  # instructor only
+
+
+class DashboardStudent(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    scores: dict[str, float | None]  # column key -> best public score
+    submissions: int
+    last_active: datetime | None
+
+
+class Dashboard(BaseModel):
+    course: CourseOut
+    columns: list[dict[str, Any]]  # {key, contest, contest_id, problem_id, dim}
+    students: list[DashboardStudent]

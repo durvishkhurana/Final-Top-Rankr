@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     submit_daily_cap: int = 20
     max_code_bytes: int = 100_000
 
+    # Seeds of the held-out contest instances are derived from this; defaults to JWT_SECRET.
+    heldout_secret: str = ""
+
     admin_email: str = ""
     admin_password: str = ""
 

@@ -34,12 +34,12 @@ CurrentUser = Annotated[User, Depends(current_user)]
 OptionalUser = Annotated[User | None, Depends(optional_user)]
 AdminUser = Annotated[User, Depends(admin_user)]
 
-EnqueueFn = Callable[[int], Awaitable[None]]
+EnqueueFn = Callable[[str, int], Awaitable[None]]
 
 
 def get_enqueue(request: Request) -> EnqueueFn:
-    async def enqueue(submission_id: int) -> None:
-        await request.app.state.queue.enqueue_job("judge_submission", submission_id)
+    async def enqueue(job: str, target_id: int) -> None:
+        await request.app.state.queue.enqueue_job(job, target_id)
 
     return enqueue
 

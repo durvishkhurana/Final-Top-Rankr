@@ -105,6 +105,24 @@ page (timetable grid, map with stops, map with routes).
   log-spaced in evaluation count from 1 to the budget. A run that stops early keeps
   its last best value for the remaining checkpoints.
 
+## Contests: public and held-out instances
+
+Outside contests, and while a contest is running, submissions are judged on the public
+instances (seeds 1, 2, 3) and their scores are visible immediately.
+
+When the organiser finalises a contest, it closes and a final evaluation runs: for every
+task, each participant's best contest submission is run again, with the same seeds and
+budget, on three held-out instances. Those scores make the final ranking.
+
+- Held-out instance seeds are derived from a server secret (`HELDOUT_SECRET`, or the
+  JWT secret if unset) and the contest id with HMAC-SHA256. They are not stored with
+  the contest and are never returned by the API.
+- All entries of a task are scored against the same reference values: the exact
+  optimum where it is known, otherwise the best value reached by any entry in the
+  final evaluation. Held-out reference values are not written to the public store.
+- Only the per-run score and precision of the final evaluation are stored, indexed by
+  instance position rather than seed.
+
 ## Scoring
 
 Each (problem, instance, dimension) has a reference value `f_ref`: the exact optimum

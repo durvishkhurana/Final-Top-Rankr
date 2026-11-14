@@ -29,6 +29,10 @@ problem instances, and ranks algorithms by server-side results.
   an animated replay of the search on the 2D demo landscapes; the best timetable, stop
   placement or set of routes drawn for the real-world packs; an activity heatmap on
   each profile.
+- **Contests and courses.** Open, invite-code and course contests over a set of tasks;
+  a public leaderboard while the contest runs and a final ranking from held-out
+  instances once the organiser closes it; courses with invite codes and an instructor
+  dashboard of every student's progress.
 - **Operations.** Per-user, per-problem submission cooldown and daily cap; a job queue
   between the API and the judge; reference values that tighten automatically when a
   run beats them, with every affected submission re-scored.
@@ -101,6 +105,7 @@ All configuration is in `.env`; see [.env.example](.env.example).
 | `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL` | Storage and queue |
 | `SANDBOX_IMAGE`, `SANDBOX_RUNTIME`, `SANDBOX_CPU`, `SANDBOX_MEMORY_MB`, `SANDBOX_TIMEOUT_SEC` | Limits for each run |
 | `SUBMIT_COOLDOWN_SEC`, `SUBMIT_DAILY_CAP` | Submission rate limits, per user and problem |
+| `HELDOUT_SECRET` | Secret that determines the held-out contest instances (defaults to `JWT_SECRET`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First admin account, created by the seed script |
 
 ## Project structure
@@ -145,7 +150,6 @@ python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 
 Not built yet:
 
-- Contests, held-out instances for final rankings, courses with invite codes
 - AI baseline and challenger, algorithm analysis, run coach, problem builder, contributed problems
 - Instructor tests, grading, code similarity, integrity signals
 - Research statistics and exports

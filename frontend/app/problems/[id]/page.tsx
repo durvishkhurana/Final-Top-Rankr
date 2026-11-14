@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BoardTable } from "@/components/board-table";
@@ -46,7 +46,12 @@ export default function ProblemPage() {
     enabled: !!me,
   });
 
-  const [dim, setDim] = useState<number>();
+  // opened from a contest page: submissions are entered into that contest
+  const search = useSearchParams();
+  const contestId = search.get("contest") ? Number(search.get("contest")) : null;
+  const [dim, setDim] = useState<number | undefined>(
+    search.get("dim") ? Number(search.get("dim")) : undefined,
+  );
   const [code, setCode] = useState<string>();
   const activeDim = dim ?? problem.data?.dims[0];
   const activeCode = code ?? templates.data?.[0]?.code ?? "";
@@ -69,7 +74,12 @@ export default function ProblemPage() {
 
   const submit = useMutation({
     mutationFn: () =>
-      post<Submission>("/submissions", { problem_id: id, dim: activeDim, code: activeCode }),
+      post<Submission>("/submissions", {
+        problem_id: id,
+        dim: activeDim,
+        code: activeCode,
+        contest_id: contestId,
+      }),
     onSuccess: (sub) => {
       queryClient.invalidateQueries({ queryKey: ["quota", id] });
       queryClient.invalidateQueries({ queryKey: ["my-submissions", id] });
@@ -115,6 +125,16 @@ export default function ProblemPage() {
           </div>
         </dl>
       </div>
+
+      {contestId && (
+        <p role="status" className="rounded-lg border p-3 text-sm">
+          Submissions from this page are entered into{" "}
+          <Link href={`/contests/${contestId}`} className="underline">
+            contest #{contestId}
+          </Link>
+          .
+        </p>
+      )}
 
       <div className="flex items-center gap-2 text-sm">
         <label htmlFor="dim">Dimension</label>

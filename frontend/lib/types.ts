@@ -127,6 +127,7 @@ export interface Submission {
   user_name: string;
   problem_id: string;
   dim: number;
+  contest_id: number | null;
   status: "queued" | "running" | "done" | "failed";
   error: string;
   budget: number | null;
@@ -189,4 +190,53 @@ export interface AdminUser {
   is_bot: boolean;
   is_demo: boolean;
   created_at: string;
+}
+
+export interface Contest {
+  id: number;
+  title: string;
+  description: string;
+  tasks: { problem_id: string; dim: number }[];
+  starts_at: string;
+  ends_at: string;
+  phase: "upcoming" | "running" | "ended" | "finalising" | "final";
+  invite_only: boolean;
+  course_id: number | null;
+  participants: number;
+  joined: boolean;
+  can_manage: boolean;
+  invite_code: string | null;
+}
+
+export interface ContestBoardRow {
+  rank: number;
+  user_id: number;
+  name: string;
+  is_baseline: boolean;
+  total: number;
+  scores: Record<string, number>;
+  final: boolean;
+}
+
+export interface Course {
+  id: number;
+  title: string;
+  description: string;
+  instructor: string;
+  students: number;
+  teaches: boolean;
+  invite_code: string | null;
+}
+
+export interface Dashboard {
+  course: Course;
+  columns: { key: string; contest: string; contest_id: number; problem_id: string; dim: number }[];
+  students: {
+    user_id: number;
+    name: string;
+    email: string;
+    scores: Record<string, number | null>;
+    submissions: number;
+    last_active: string | null;
+  }[];
 }

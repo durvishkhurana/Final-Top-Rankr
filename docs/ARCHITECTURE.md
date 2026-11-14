@@ -73,6 +73,13 @@ erDiagram
     PROBLEMS ||--o{ SUBMISSIONS : receives
     SUBMISSIONS ||--o{ RUNS : has
     PROBLEMS ||--o{ F_REFS : "best-known values"
+    USERS ||--o{ COURSES : teaches
+    COURSES ||--o{ ENROLLMENTS : has
+    USERS ||--o{ ENROLLMENTS : joins
+    COURSES ||--o{ CONTESTS : "may own"
+    CONTESTS ||--o{ CONTEST_ENTRIES : has
+    CONTESTS ||--o{ SUBMISSIONS : receives
+    CONTESTS ||--o{ FINAL_RESULTS : "held-out scores"
 
     USERS {
         int id PK
@@ -127,6 +134,32 @@ erDiagram
         json trace "best-so-far at checkpoints"
         text log
     }
+    COURSES {
+        int id PK
+        string title
+        string invite_code UK
+        int instructor_id FK
+    }
+    CONTESTS {
+        int id PK
+        string title
+        string invite_code "null: open"
+        int course_id FK "null: public"
+        json tasks "problem and dimension pairs"
+        datetime starts_at
+        datetime ends_at
+        string status "open, finalising, final"
+    }
+    FINAL_RESULTS {
+        int id PK
+        int contest_id FK
+        int user_id FK
+        string problem_id
+        int dim
+        int submission_id FK
+        float score
+        json runs "per-run score and precision"
+    }
     F_REFS {
         string problem_id PK
         int dim PK
@@ -148,6 +181,16 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
 - State-changing requests carrying an `Origin` header other than the frontend's are
   refused.
 
+## Contests and courses
+
+- A contest is a set of tasks (problem and dimension) with a start and end time. It is
+  open to everyone, protected by an invite code, or attached to a course. Instructors
+  and admins create contests; a participant joins, then submits to its tasks from the
+  contest page. See `JUDGE.md` for the public and held-out evaluation.
+- A course has an instructor and an invite code. Its contests are visible only to its
+  members. The instructor's dashboard shows each student's best public score on every
+  course contest task, their submission count and their last activity.
+
 ## Ratings
 
 - Problem leaderboard: each user's best submission on that problem and dimension.
@@ -167,6 +210,8 @@ Interactive documentation is served by the API at `/docs`.
 | Problems | `GET /api/problems`, `/problems/{id}`, `/problems/{id}/leaderboard?dim=`, `/problems/{id}/quota`, `/templates` |
 | Submissions | `POST /api/submissions`, `GET /api/submissions`, `GET /api/submissions/{id}` |
 | Boards | `GET /api/leaderboard?by=user|country|institution`, `GET /api/stats` |
+| Contests | `GET/POST /api/contests`, `GET /api/contests/{id}`, `POST .../join`, `GET .../leaderboard`, `POST .../finalise` |
+| Courses | `GET/POST /api/courses`, `POST /api/courses/join`, `GET /api/courses/{id}/dashboard` |
 | Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `GET /api/admin/submissions` |
 
 A submission's score and convergence are public. Its code, logs and error messages are

@@ -84,5 +84,5 @@ async def run_baselines(problem_id: str, body: BaselinesIn, _: AdminUser, sessio
     await session.commit()
     for sub in subs:
         await session.refresh(sub)
-        await enqueue(sub.id)
+        await enqueue("judge_submission", sub.id)
     return [_out(s) for s in subs]

@@ -63,6 +63,7 @@ class Submission(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     problem_id: Mapped[str] = mapped_column(ForeignKey("problems.id"))
     dim: Mapped[int]
+    contest_id: Mapped[int | None] = mapped_column(ForeignKey("contests.id"), index=True)
     code: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="queued")  # queued|running|done|failed
     error: Mapped[str] = mapped_column(Text, default="")
@@ -113,3 +114,70 @@ class FRef(Base):
     dim: Mapped[int] = mapped_column(primary_key=True)
     instance_seed: Mapped[int] = mapped_column(primary_key=True)
     value: Mapped[float]
+
+
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(150))
+    description: Mapped[str] = mapped_column(Text, default="")
+    invite_code: Mapped[str] = mapped_column(String(20), unique=True)
+    instructor_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"),
+                                           primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"),
+                                         primary_key=True)
+
+
+class Contest(Base):
+    __tablename__ = "contests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(150))
+    description: Mapped[str] = mapped_column(Text, default="")
+    invite_code: Mapped[str | None] = mapped_column(String(20))  # None: open to everyone
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
+    tasks: Mapped[list[dict[str, Any]]] = mapped_column(JSON)  # [{problem_id, dim}]
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|finalising|final
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class ContestEntry(Base):
+    __tablename__ = "contest_entries"
+
+    contest_id: Mapped[int] = mapped_column(ForeignKey("contests.id", ondelete="CASCADE"),
+                                            primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"),
+                                         primary_key=True)
+
+
+class FinalResult(Base):
+    """Score of a participant's best contest submission re-run on held-out instances."""
+
+    __tablename__ = "final_results"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contest_id: Mapped[int] = mapped_column(ForeignKey("contests.id", ondelete="CASCADE"),
+                                            index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    problem_id: Mapped[str] = mapped_column(String(20))
+    dim: Mapped[int]
+    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"))
+    score: Mapped[float]
+    aocc: Mapped[float]
+    iqr: Mapped[float]
+    median_precision: Mapped[float | None]
+    # per run: {instance (0-based index, not the seed), seed, status, aocc, precision}
+    runs: Mapped[list[dict[str, Any]]] = mapped_column(JSON)

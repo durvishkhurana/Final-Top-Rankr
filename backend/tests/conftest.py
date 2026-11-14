@@ -61,8 +61,9 @@ def queued() -> list[int]:
 
 @pytest.fixture
 async def client(session: AsyncSession, queued: list[int]) -> AsyncIterator[AsyncClient]:
-    async def enqueue(submission_id: int) -> None:
-        queued.append(submission_id)
+    async def enqueue(job: str, target_id: int) -> None:
+        if job == "judge_submission":
+            queued.append(target_id)
 
     app.dependency_overrides[get_enqueue] = lambda: enqueue
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

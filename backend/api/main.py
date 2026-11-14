@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from core.config import get_settings
 
-from .routes import admin, auth, board, problems, submissions, users
+from .routes import admin, auth, board, contests, courses, problems, submissions, users
 
 
 @asynccontextmanager
@@ -36,7 +36,7 @@ async def reject_cross_site_writes(
     return await call_next(request)
 
 
-for module in (auth, users, problems, submissions, board, admin):
+for module in (auth, users, problems, submissions, board, contests, courses, admin):
     app.include_router(module.router, prefix="/api")
 
 
