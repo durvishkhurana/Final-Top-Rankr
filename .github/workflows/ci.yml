@@ -8,6 +8,21 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: topranker
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: topranker
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U topranker" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      # throwaway values for the CI database only
+      DATABASE_URL: postgresql+asyncpg://topranker:ci-only@localhost:5432/topranker
+      JWT_SECRET: ci-only-not-a-real-secret
     defaults:
       run:
         working-directory: backend
@@ -17,7 +32,25 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: ruff check . ../scripts ../sandbox
+      - run: ruff check . ../scripts ../sandbox ../worker
       - run: mypy .
       - run: sh ../scripts/build_sandbox.sh
       - run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-fund --no-audit
+      - run: npx eslint .
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

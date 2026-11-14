@@ -1,32 +1,50 @@
 [project]
 name = "topranker-backend"
 version = "0.1.0"
-requires-python = ">=3.12"
-dependencies = ["numpy>=2,<3"]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2,<3",
+    # DE baseline and reference runs, when judged outside the sandbox image
+    "scipy>=1.14,<2",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.1",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.3",
+    "argon2-cffi>=23.1",
+    "pyjwt>=2.8",
+    "arq>=0.26",
+]
 
 [project.optional-dependencies]
-# scipy is only needed by the DE baseline and the reference-run script
-dev = ["ruff", "mypy", "pytest", "scipy>=1.14,<2"]
+dev = ["ruff", "mypy", "pytest", "httpx"]
 
 [tool.setuptools.packages.find]
-include = ["judge*"]
+include = ["judge*", "api*", "core*", "db*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*" = ["E501"]
+
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
+mypy_path = ".."
+plugins = ["pydantic.mypy"]
 strict = true
 # numpy reductions are typed as Any
 warn_return_any = false
-# baselines are submissions (untyped by contract), not platform code
-exclude = ['\.venv', 'judge/baselines/(?!__init__)']
+# baselines and templates are submissions (untyped by contract), not platform code
+exclude = ['\.venv', 'judge/(baselines|templates)/(?!__init__)']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", ".."]
 markers = ["docker: needs the Docker daemon and the sandbox image"]

@@ -29,7 +29,7 @@ def test_random_search_uses_full_budget_and_trace_is_verified() -> None:
     assert r.trace[-1] == r.f_best
     # the worker's record matches an independent replay of the same seeded points
     X = np.random.default_rng(1).uniform(INST.lower, INST.upper, size=(BUDGET, DIM))
-    assert r.f_best == pytest.approx(float(INST(X).min()))
+    assert r.f_best == pytest.approx(float(np.min(INST(X))))
 
 
 def test_same_seed_reproduces_and_other_seed_differs() -> None:
@@ -101,7 +101,7 @@ def test_points_are_clipped_and_non_finite_never_become_best() -> None:
             "    assert np.isinf(v[0]) and v[1] == dim\n",
             f, DIM, INST.lower, INST.upper, BUDGET, 1, sandbox=False)
     assert r.status == "ok", r.error
-    assert seen[0].max() == 5.0 and seen[0].min() == -5.0
+    assert np.max(seen[0]) == 5.0 and np.min(seen[0]) == -5.0
     assert r.f_best == DIM
 
 

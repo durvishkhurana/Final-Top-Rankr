@@ -1,0 +1,87 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+
+import { Empty, ErrorNote, Loading, PageTitle } from "@/components/state";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
+import type { GlobalRow } from "@/lib/types";
+
+type By = "user" | "country" | "institution";
+
+function Board({ by }: { by: By }) {
+  const { data, error, isPending } = useQuery({
+    queryKey: ["leaderboard", by],
+    queryFn: () => api<GlobalRow[]>(`/leaderboard?by=${by}`),
+  });
+  if (isPending) return <Loading />;
+  if (error) return <ErrorNote error={error} />;
+  if (data.length === 0) return <Empty>Nothing to rank yet.</Empty>;
+  const people = by === "user";
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-12">#</TableHead>
+          <TableHead>{people ? "Name" : by === "country" ? "Country" : "Institution"}</TableHead>
+          {people && <TableHead>Institution</TableHead>}
+          {people && <TableHead>Country</TableHead>}
+          <TableHead className="text-right">{people ? "Rating" : "Mean rating"}</TableHead>
+          <TableHead className="text-right">{people ? "Problems" : "Rated members"}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((row) => (
+          <TableRow key={row.key}>
+            <TableCell className="tabular-nums">{row.rank}</TableCell>
+            <TableCell>
+              {people ? (
+                <Link href={`/profile/${row.key}`} className="hover:underline">
+                  {row.name}
+                </Link>
+              ) : (
+                row.name
+              )}
+            </TableCell>
+            {people && <TableCell>{row.institution || "–"}</TableCell>}
+            {people && <TableCell>{row.country || "–"}</TableCell>}
+            <TableCell className="text-right font-medium tabular-nums">
+              {row.rating.toFixed(0)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {people ? row.problems : row.members}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+export default function LeaderboardPage() {
+  return (
+    <>
+      <PageTitle title="Leaderboard">
+        A rating is the sum, over problems, of a person&apos;s best score on that problem (0 to
+        1000 each). Countries and institutions are ranked by the mean rating of their rated
+        members. Baselines are not ranked here; they appear on each problem&apos;s own
+        leaderboard.
+      </PageTitle>
+      <Tabs defaultValue="user">
+        <TabsList>
+          <TabsTrigger value="user">People</TabsTrigger>
+          <TabsTrigger value="country">Countries</TabsTrigger>
+          <TabsTrigger value="institution">Institutions</TabsTrigger>
+        </TabsList>
+        {(["user", "country", "institution"] as const).map((by) => (
+          <TabsContent key={by} value={by} className="pt-3">
+            <Board by={by} />
+          </TabsContent>
+        ))}
+      </Tabs>
+    </>
+  );
+}

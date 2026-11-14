@@ -3,7 +3,7 @@
 TopRanker is an online judge for optimization algorithms. Users submit an optimizer
 (a Python function), not an answer. The platform runs it in a sandbox against hidden
 black-box fitness functions under a fixed evaluation budget, over multiple seeds and
-hidden problem instances, and ranks algorithms by server-side results.
+problem instances, and ranks algorithms by server-side results.
 
 - Kaggle compares models on datasets; TopRanker compares optimization algorithms on
   hidden functions under identical budgets.
@@ -12,57 +12,127 @@ hidden problem instances, and ranks algorithms by server-side results.
 - The format follows the NeurIPS 2020 Black-Box Optimization Challenge, turned into a
   permanent platform for classrooms and research groups.
 
-## Status
+## What is built
 
-Early development. What exists today:
+- **Judge.** 18 built-in problems (ten TopRanker originals and a standard set of eight)
+  with seeded shift and rotation instances. Submitted code runs in a locked-down
+  container; the objective function never enters it. Budget enforcement, convergence
+  traces, AOCC scoring, and three baselines (random search, differential evolution,
+  CMA-ES) judged like any submission.
+- **Web platform.** Accounts with student, instructor and admin roles; problem
+  catalogue; code submission with an in-browser editor and starter templates; live run
+  status; per-submission convergence chart and run table; per-problem leaderboards with
+  baselines; global leaderboards by person, country and institution; statistics page;
+  user profiles; an admin page for roles, problem visibility and baseline runs.
+- **Operations.** Per-user, per-problem submission cooldown and daily cap; a job queue
+  between the API and the judge; reference values that tighten automatically when a
+  run beats them, with every affected submission re-scored.
 
-- The judge core, usable from the command line: 18 built-in problems (TR-001 to TR-010
-  and a standard set of 8) with seeded shift and rotation instances, sandboxed execution
-  of submitted optimizers, budget enforcement, convergence traces, AOCC scoring, and
-  three baselines (random search, differential evolution, CMA-ES). See
-  [docs/JUDGE.md](docs/JUDGE.md) and [docs/SECURITY.md](docs/SECURITY.md).
-- Local Postgres and Redis via Docker Compose (not used by the judge yet).
-- CI running lint, type checks and tests, including the sandbox isolation tests.
+Screenshots: _to be added._
 
-There is no web application, API, database schema or job queue yet.
+## Architecture
 
-## Try the judge
-
-Requires Docker and Python 3.12 with NumPy and SciPy.
-
-```bash
-sh scripts/build_sandbox.sh
-python scripts/run_local.py --baseline cmaes --problem STD-001 --dim 10
-python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
+```mermaid
+flowchart LR
+    B[Browser] --> F[Frontend<br/>Next.js]
+    F -->|/api/*| A[API<br/>FastAPI]
+    A --> P[(PostgreSQL)]
+    A --> R[(Redis queue)]
+    R --> W[Worker]
+    W --> P
+    W -->|one container per run| S[Sandbox]
 ```
 
-## Tests
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/JUDGE.md](docs/JUDGE.md),
+[docs/SECURITY.md](docs/SECURITY.md).
+
+## Quick start
+
+Requires Docker (on Windows: Docker Desktop with the WSL2 backend).
+
+```bash
+cp .env.example .env
+```
+
+Replace every `change-me` in `.env` with a random value (for example from
+`python -c "import secrets; print(secrets.token_urlsafe(48))"`), set `ADMIN_EMAIL`, then:
+
+```bash
+sh scripts/setup.sh
+```
+
+This builds the sandbox image, starts all services, applies migrations and seeds the
+catalogue, the baselines on every problem and a set of demo users. Seeding judges about
+250 submissions and takes 10 to 20 minutes. Demo logins are printed once at the end.
+
+- App: http://localhost:3000
+- API documentation: http://localhost:8000/docs
+
+To start without demo data, run `docker compose up -d --build --wait` and then
+`docker compose exec backend python ../scripts/seed.py`. `scripts/reset.py` removes the
+demo users and their submissions.
+
+## Configuration
+
+All configuration is in `.env`; see [.env.example](.env.example).
+
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET`, `JWT_ACCESS_TTL_MIN`, `JWT_REFRESH_TTL_DAYS` | Session tokens |
+| `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL` | Storage and queue |
+| `SANDBOX_IMAGE`, `SANDBOX_RUNTIME`, `SANDBOX_CPU`, `SANDBOX_MEMORY_MB`, `SANDBOX_TIMEOUT_SEC` | Limits for each run |
+| `SUBMIT_COOLDOWN_SEC`, `SUBMIT_DAILY_CAP` | Submission rate limits, per user and problem |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First admin account, created by the seed script |
+
+## Project structure
+
+```
+frontend/    Next.js app
+backend/     API (api/), settings and security (core/), models and migrations (db/, alembic/),
+             judge (judge/), tests (tests/)
+worker/      Queue worker
+sandbox/     Sandbox image and in-container harness
+problems/    Public problem catalogue
+scripts/     Setup, seed, reset, local judging, reference values
+docs/        Documentation
+```
+
+## Development and tests
+
+Backend (Python 3.11+, with Postgres running via `docker compose up -d postgres redis`):
 
 ```bash
 cd backend
 pip install -e ".[dev]"
-ruff check . && mypy . && pytest
+ruff check . ../scripts ../sandbox ../worker && mypy . && pytest
 ```
 
-## Local services
-
-Requires Docker Desktop (WSL2 backend on Windows).
+Frontend:
 
 ```bash
-cp .env.example .env   # then replace the change-me values
-docker compose up -d
+cd frontend
+npm ci
+npx eslint . && npm run typecheck && npm test
+npm run dev
+```
+
+Judge a file from the command line, without the web app:
+
+```bash
+python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 ```
 
 ## Roadmap
 
-- Job queue worker and stored results
-- Held-out instances for final rankings
-- Web platform: accounts, problems, code submission, leaderboards
-- Convergence charts, 2D landscape animation, real-world problem packs
-- Contests and courses
-- AI baseline, algorithm analysis, run coach, problem builder
-- Instructor tests and integrity signals
+Not built yet:
+
+- Convergence overlays against other entries, 2D landscape animation, activity heatmap
+- Real-world problem packs (timetabling, facility location, routing)
+- Contests, held-out instances for final rankings, courses with invite codes
+- AI baseline and challenger, algorithm analysis, run coach, problem builder, contributed problems
+- Instructor tests, grading, code similarity, integrity signals
 - Research statistics and exports
+- Browser end-to-end tests, deployment guide
 
 ## License
 
