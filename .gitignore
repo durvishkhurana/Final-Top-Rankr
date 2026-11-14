@@ -31,3 +31,7 @@ test-results/
 Thumbs.db
 .vscode/
 .idea/
+
+# local caches and data (kept on D:)
+.cache/
+data/
