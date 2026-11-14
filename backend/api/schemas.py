@@ -1,0 +1,221 @@
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class Model(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- auth / users -----------------------------------------------------------------------
+
+
+class SignupIn(BaseModel):
+    email: EmailStr
+    name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=200)
+    country: str = Field(default="", max_length=80)
+    institution: str = Field(default="", max_length=150)
+
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str = Field(max_length=200)
+
+
+class ProfileIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    country: str | None = Field(default=None, max_length=80)
+    institution: str | None = Field(default=None, max_length=150)
+    bio: str | None = Field(default=None, max_length=500)
+
+
+class Me(Model):
+    id: int
+    email: str
+    name: str
+    role: str
+    country: str
+    institution: str
+    bio: str
+
+
+class ProfileSubmission(Model):
+    id: int
+    problem_id: str
+    dim: int
+    status: str
+    score: float | None
+    created_at: datetime
+
+
+class Profile(Model):
+    id: int
+    name: str
+    role: str
+    country: str
+    institution: str
+    bio: str
+    created_at: datetime
+    rating: float
+    rank: int | None
+    problems_attempted: int
+    submissions: int
+    recent: list[ProfileSubmission]
+
+
+# --- problems ---------------------------------------------------------------------------
+
+
+class ProblemOut(Model):
+    id: str
+    name: str
+    category: str
+    level: str
+    tags: list[str]
+    summary: str
+    dims: list[int]
+    bound: float
+    is_active: bool
+    submissions: int = 0
+
+
+class ProblemDetail(ProblemOut):
+    description: str
+
+
+class Quota(BaseModel):
+    daily_cap: int
+    used_today: int
+    remaining_today: int
+    cooldown_sec: int
+    wait_sec: int  # 0 when a submission is allowed now
+
+
+class BoardRow(BaseModel):
+    rank: int
+    user_id: int
+    name: str
+    country: str
+    institution: str
+    is_baseline: bool
+    submission_id: int
+    score: float
+    median_precision: float | None
+    iqr: float | None
+    submitted_at: datetime
+
+
+class Template(BaseModel):
+    key: str
+    name: str
+    code: str
+
+
+# --- submissions ------------------------------------------------------------------------
+
+
+class SubmitIn(BaseModel):
+    problem_id: str
+    dim: int
+    code: str = Field(min_length=1)
+
+
+class RunOut(Model):
+    instance_seed: int
+    seed: int
+    status: str
+    error: str
+    evals: int
+    aocc: float
+    precision: float | None
+    wall_sec: float
+
+
+class RunDetail(RunOut):
+    # Precision at each checkpoint (best-so-far minus the reference value, floored at
+    # 1e-8). Raw objective values are not exposed.
+    precision_trace: list[float | None]
+    log: str
+
+
+class SubmissionOut(Model):
+    id: int
+    user_id: int
+    user_name: str
+    problem_id: str
+    dim: int
+    status: str
+    error: str
+    budget: int | None
+    score: float | None
+    aocc: float | None
+    iqr: float | None
+    median_precision: float | None
+    created_at: datetime
+    finished_at: datetime | None
+
+
+class SubmissionDetail(SubmissionOut):
+    code: str
+    checkpoints: list[int]
+    runs: list[RunDetail]
+
+
+# --- leaderboard / stats / admin --------------------------------------------------------
+
+
+class GlobalRow(BaseModel):
+    rank: int
+    key: str  # user id, country or institution
+    name: str
+    country: str = ""
+    institution: str = ""
+    rating: float
+    problems: int = 0
+    members: int = 1
+
+
+class DayCount(BaseModel):
+    day: str
+    count: int
+
+
+class ProblemCount(BaseModel):
+    problem_id: str
+    name: str
+    count: int
+
+
+class Stats(BaseModel):
+    users: int
+    problems: int
+    submissions: int
+    runs: int
+    evaluations: int
+    per_day: list[DayCount]
+    per_problem: list[ProblemCount]
+    by_status: dict[str, int]
+
+
+class AdminUser(Model):
+    id: int
+    email: str
+    name: str
+    role: str
+    is_bot: bool
+    is_demo: bool
+    created_at: datetime
+
+
+class RoleIn(BaseModel):
+    role: Literal["student", "instructor", "admin"]
+
+
+class ActiveIn(BaseModel):
+    is_active: bool
+
+
+class BaselinesIn(BaseModel):
+    dim: int
