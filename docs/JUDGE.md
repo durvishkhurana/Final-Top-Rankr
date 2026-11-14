@@ -119,6 +119,16 @@ robustness measure.
 
 A run that fails (exception, timeout, crash, memory limit) scores 0.
 
+When a run finds a value below the stored `f_ref` of its instance, `f_ref` is lowered to
+that value and every submission on the same problem and dimension is re-scored from its
+stored traces.
+
+## Rate limits
+
+Per user and problem: a cooldown between submissions (default 30 s) and a daily cap
+(default 20, counted per UTC day). Both are configurable. The submission page shows
+the remaining quota.
+
 ## Baselines
 
 Three baselines are ordinary submissions in `backend/judge/baselines/` and are judged

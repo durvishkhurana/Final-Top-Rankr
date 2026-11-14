@@ -57,9 +57,19 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
   never exposed in public runs.
 - Timing side channels and hardware attacks are out of scope.
 
+## Accounts
+
+- Passwords are hashed with Argon2. Session tokens are held in httpOnly, SameSite=Lax
+  cookies (Secure outside development); refresh tokens are single-use.
+- State-changing requests from another origin are refused.
+- Code, logs and error messages of a submission are visible only to its author and admins.
+- Not yet in place: rate limiting of sign-in attempts, email verification, password reset.
+
 ## Operating notes
 
 - The process that launches containers needs access to the Docker daemon, which is
   equivalent to root on that host. Run the worker on a dedicated VM, not next to
   unrelated services.
+- In the Compose setup the worker container mounts the host Docker socket. Treat that
+  container as privileged.
 - Keep the sandbox image and Docker up to date.
