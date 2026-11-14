@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "An online judge for optimization algorithms: submit an optimizer, run it on hidden functions under a fixed budget, compare on verified results.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">

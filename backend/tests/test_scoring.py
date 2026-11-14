@@ -68,12 +68,12 @@ def test_best_so_far_at_matches_brute_force() -> None:
     rng = np.random.default_rng(3)
     values = rng.normal(size=1000)
     pts = checkpoints(1000)
-    expected = [float(values[:p].min()) for p in pts]
+    expected = [float(np.min(values[:p])) for p in pts]
     trace: list[float] = []
     best, done = np.inf, 0
     while done < 1000:
         chunk = values[done : done + int(rng.integers(1, 90))]
         trace += best_so_far_at(chunk, best, done, pts)
-        best = min(best, float(chunk.min()))
+        best = min(best, float(np.min(chunk)))
         done += len(chunk)
     assert trace == expected

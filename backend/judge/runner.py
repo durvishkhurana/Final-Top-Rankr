@@ -150,7 +150,7 @@ def run(
                 values = np.asarray(f(X), dtype=np.float64)
             values = np.where(np.isfinite(values), values, np.inf)
             result.trace += best_so_far_at(values, result.f_best, result.evals, points)
-            result.f_best = min(result.f_best, float(values.min()))
+            result.f_best = min(result.f_best, float(np.min(values)))
             result.evals += n
             stdin.write(values.tobytes())
             stdin.flush()
