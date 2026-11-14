@@ -1,0 +1,33 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# local-only working files
+CLAUDE.md
+.internal/
+.claude/
+_reference/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
