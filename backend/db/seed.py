@@ -14,13 +14,14 @@ from judge.functions import PROBLEMS
 from .models import FRef, Problem, User
 
 CATALOGUE = ROOT / "problems" / "catalogue.json"
-DEFAULT_DIMS = [5, 10, 20]
 
 
 async def sync_catalogue(session: AsyncSession) -> int:
     entries = json.loads(CATALOGUE.read_text(encoding="utf-8"))
     for entry in entries:
-        values = {**entry, "bound": PROBLEMS[entry["id"]].bound, "dims": DEFAULT_DIMS}
+        problem = PROBLEMS[entry["id"]]
+        values = {**entry, "bound": problem.bound, "dims": list(problem.dims),
+                  "kind": problem.kind}
         update = {k: v for k, v in values.items() if k != "id"}
         await session.execute(insert(Problem).values(**values)
                               .on_conflict_do_update(index_elements=[Problem.id], set_=update))

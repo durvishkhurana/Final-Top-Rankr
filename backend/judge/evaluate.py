@@ -14,6 +14,7 @@ from .scoring import aggregate, aocc, checkpoints, default_budget, precision
 
 PUBLIC_INSTANCE_SEEDS = (1, 2, 3)
 RUN_SEEDS = (1, 2, 3, 4, 5)
+MAX_POINTS = 600  # per run, for the 2D landscape animation
 
 
 def _finite(value: float) -> float | None:
@@ -57,9 +58,17 @@ def judge(
     instances = {s: make_instance(problem, dim, s) for s in instance_seeds}
     jobs = [(i, s) for i in instance_seeds for s in run_seeds]
 
+    keep = MAX_POINTS if problem.kind == "landscape2d" else 0
+
     def one(job: tuple[int, int]) -> RunResult:
         inst = instances[job[0]]
-        return run(code, inst, dim, inst.lower, inst.upper, budget, job[1], limits, sandbox)
+        return run(code, inst, dim, inst.lower, inst.upper, budget, job[1], limits, sandbox,
+                   keep)
+
+    def solution(i: int, r: RunResult) -> Any:
+        if problem.factory is None or r.x_best is None:
+            return None
+        return instances[i].decode(np.array(r.x_best))
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = dict(zip(jobs, pool.map(one, jobs), strict=True))
@@ -78,7 +87,8 @@ def judge(
     runs: list[dict[str, Any]] = [
         {"instance_seed": i, "seed": s, "status": r.status, "error": r.error,
          "evals": r.evals, "f_best": _finite(r.f_best), "wall_sec": r.wall_sec,
-         "trace": [_finite(v) for v in r.trace], "log": r.log}
+         "trace": [_finite(v) for v in r.trace], "log": r.log,
+         "points": r.points, "solution": solution(i, r)}
         for (i, s), r in results.items()
     ]  # fmt: skip
     return {**score_runs(runs, refs, budget), "budget": budget,

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import func, select
 
@@ -5,7 +7,7 @@ from db.models import Submission, User
 
 from ..deps import CurrentUser, Session
 from ..ratings import user_ratings
-from ..schemas import Me, Profile, ProfileIn, ProfileSubmission
+from ..schemas import DayCount, Me, Profile, ProfileIn, ProfileSubmission
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -16,6 +18,18 @@ async def update_me(body: ProfileIn, user: CurrentUser, session: Session) -> Use
         setattr(user, key, value.strip())
     await session.commit()
     return user
+
+
+@router.get("/{user_id}/activity", response_model=list[DayCount])
+async def activity(user_id: int, session: Session) -> list[DayCount]:
+    """Submissions per UTC day over the last year, for the profile heatmap."""
+    day = func.date(Submission.created_at)
+    rows = await session.execute(
+        select(day, func.count())
+        .where(Submission.user_id == user_id,
+               Submission.created_at >= datetime.now(UTC) - timedelta(days=371))
+        .group_by(day).order_by(day))
+    return [DayCount(day=str(d), count=n) for d, n in rows]
 
 
 @router.get("/{user_id}", response_model=Profile)

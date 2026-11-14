@@ -48,6 +48,7 @@ class Problem(Base):
     description: Mapped[str] = mapped_column(Text)
     dims: Mapped[list[int]] = mapped_column(JSON)
     bound: Mapped[float]
+    kind: Mapped[str] = mapped_column(String(20), default="function", server_default="function")
     is_active: Mapped[bool] = mapped_column(default=True)
 
 
@@ -97,6 +98,8 @@ class Run(Base):
     wall_sec: Mapped[float]
     trace: Mapped[list[Any]] = mapped_column(JSON)  # best-so-far at scoring.checkpoints(budget)
     log: Mapped[str] = mapped_column(Text, default="")
+    points: Mapped[list[Any] | None] = mapped_column(JSON)  # 2D demo problems only
+    solution: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # decoded, real-world only
 
     submission: Mapped[Submission] = relationship(back_populates="runs")
 

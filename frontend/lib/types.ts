@@ -21,6 +21,7 @@ export interface Problem {
   summary: string;
   dims: number[];
   bound: number;
+  kind: "function" | "landscape2d" | "timetable" | "facility" | "routing";
   is_active: boolean;
   submissions: number;
   description?: string;
@@ -65,6 +66,59 @@ export interface Run {
   wall_sec: number;
   precision_trace: (number | null)[];
   log: string;
+  points: [number, number][] | null;
+  solution: Solution | null;
+}
+
+export interface Curve {
+  label: string;
+  is_baseline: boolean;
+  submission_id: number;
+  median: (number | null)[];
+}
+
+export interface Curves {
+  checkpoints: number[];
+  curves: Curve[];
+}
+
+export interface ProblemView {
+  kind: Problem["kind"];
+  lower: number[];
+  upper: number[];
+  grid: number[][] | null;
+  data: InstanceData | null;
+}
+
+type XY = { x: number; y: number };
+
+// Public instance data of the real-world packs (backend/judge/realworld.py: public())
+export interface InstanceData {
+  size?: number;
+  // timetable
+  courses?: { name: string; students: number }[];
+  rooms?: number[];
+  slots?: number;
+  clash_pairs?: number;
+  // facility
+  stops?: number;
+  demand?: (XY & { people: number })[];
+  // routing
+  capacity?: number;
+  depot?: XY;
+  customers?: (XY & { demand: number })[];
+}
+
+// Decoded best solution of a run (decode())
+export interface Solution {
+  slots?: { course: string; students: number; room: number | null; capacity: number }[][];
+  clashing_students?: number;
+  unseated_students?: number;
+  stops?: (XY & { people: number })[];
+  assigned?: number[];
+  mean_distance?: number;
+  routes?: { customers: number[]; load: number }[];
+  total_distance?: number;
 }
 
 export interface Submission {

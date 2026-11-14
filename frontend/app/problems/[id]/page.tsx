@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 
 import { BoardTable } from "@/components/board-table";
 import { CodeEditor } from "@/components/code-editor";
+import { LandscapePlayer } from "@/components/landscape-player";
+import { SolutionView } from "@/components/solution-view";
 import { ErrorNote, Loading } from "@/components/state";
 import { SubmissionList } from "@/components/submission-list";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
-import type { Problem, Quota, Submission, Template } from "@/lib/types";
+import type { Problem, ProblemView, Quota, Submission, Template } from "@/lib/types";
 
 const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 
@@ -48,6 +50,12 @@ export default function ProblemPage() {
   const [code, setCode] = useState<string>();
   const activeDim = dim ?? problem.data?.dims[0];
   const activeCode = code ?? templates.data?.[0]?.code ?? "";
+  const kind = problem.data?.kind ?? "function";
+  const view = useQuery({
+    queryKey: ["view", id, activeDim, 1],
+    queryFn: () => api<ProblemView>(`/problems/${id}/view?dim=${activeDim}`),
+    enabled: kind !== "function" && !!activeDim,
+  });
 
   // Count the cooldown down locally between quota fetches.
   const [now, setNow] = useState(() => Date.now());
@@ -95,7 +103,7 @@ export default function ProblemPage() {
           </div>
           <div>
             <dt className="text-muted-foreground">Budget</dt>
-            <dd>2000 × dimension evaluations</dd>
+            <dd>{activeDim ? (2000 * activeDim).toLocaleString() : "2000 × dimension"} evaluations</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Runs per submission</dt>
@@ -121,6 +129,19 @@ export default function ProblemPage() {
           ))}
         </select>
       </div>
+
+      {view.data && (
+        <section>
+          <h2 className="mb-2 text-lg font-medium">
+            {kind === "landscape2d" ? "Landscape of public instance 1" : "Public instance 1"}
+          </h2>
+          {view.data.grid ? (
+            <LandscapePlayer view={view.data} />
+          ) : (
+            view.data.data && <SolutionView kind={kind} data={view.data.data} />
+          )}
+        </section>
+      )}
 
       <Tabs defaultValue="submit">
         <TabsList>

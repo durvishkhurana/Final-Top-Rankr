@@ -9,6 +9,7 @@ Instance parameters must never leave the worker process.
 
 import zlib
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -30,9 +31,11 @@ class Instance:
         return self.problem.fn((X - self.x_star) @ self.rotation.T + z_opt)
 
 
-def make_instance(problem: Problem, dim: int, instance_seed: int) -> Instance:
+def make_instance(problem: Problem, dim: int, instance_seed: int) -> Any:
     if dim < 2:
         raise ValueError("dim must be at least 2")
+    if problem.factory is not None:
+        return problem.factory(problem, dim, instance_seed)
     rng = np.random.default_rng([instance_seed, dim, zlib.crc32(problem.id.encode())])
     x_star = rng.uniform(-1.0, 1.0, dim) * problem.shift_frac * problem.bound
     Q, R = np.linalg.qr(rng.standard_normal((dim, dim)))

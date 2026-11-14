@@ -58,6 +58,9 @@ records the trace itself.
 | TR-001 to TR-010 | Cascading Tide, Phantom Plateau, Spiral Sink, Mirage Basin, Recursive Ripple, Tidal Lock, Vortex Core, Hollow Crown, Phase Shift Labyrinth, Abyss Gate |
 | STD-001 to STD-008 | Sphere, Ellipsoid, Rosenbrock, Rastrigin, Ackley, Griewank, Schwefel, Lunacek bi-Rastrigin |
 
+| D2-001 to D2-004 | Two-variable demos (Rastrigin, Rosenbrock, Ackley, Lunacek), dimension 2 only. Their landscape is public and a thinned sample of up to 600 evaluated points per run is kept for the replay. |
+| RW-001 to RW-003 | Real-world packs: exam timetabling, bus-stop location, delivery routing. See below. |
+
 A submission is never run on a base function directly. Each instance is generated from
 an instance seed (together with the problem and the dimension):
 
@@ -75,6 +78,23 @@ f_inst(x) = f_base(R (x - x*) + z_opt)
 
 Schwefel's formula is only valid on `[-500, 500]`; outside that range the clipped
 point is evaluated and a quadratic penalty is added. Variable scaling is not applied.
+
+## Real-world packs
+
+The three packs use a random-key encoding: the search box is `[0, 1]^dim` and a decoder
+turns the vector into a solution, so any continuous optimizer can be used unchanged.
+There is no shift or rotation; the instance seed generates the data, and the data of
+the public instances is shown on the problem page.
+
+| Problem | Vector | Decoder | Objective (minimised) |
+|---|---|---|---|
+| RW-001 Exam timetabling | One key per course (dim = courses: 10, 20, 30) | `slot = floor(key x slots)`; within a slot the largest exam gets the largest room | Students with two exams in one slot plus students without a seat, per 100 enrolments |
+| RW-002 Bus-stop location | Two keys per stop (dim = 2 x stops: 6, 10, 20) | Keys are the stop's map coordinates | Demand-weighted mean distance from a demand point to its nearest stop |
+| RW-003 Delivery routing | One key per customer (dim = customers: 10, 20, 30) | Sorting the keys gives the visiting order; a vehicle returns to the depot when the next delivery would exceed its capacity | Total distance driven |
+
+Their optima are not known, so `f_ref` is the best value found so far, as for the TR
+problems. The decoded best solution of every run is stored and drawn on the submission
+page (timetable grid, map with stops, map with routes).
 
 ## Budget, runs and trace
 

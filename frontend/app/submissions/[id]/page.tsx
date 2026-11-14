@@ -3,15 +3,18 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 
 import { CodeEditor } from "@/components/code-editor";
 import { ConvergenceChart } from "@/components/convergence-chart";
+import { LandscapePlayer } from "@/components/landscape-player";
+import { SolutionView } from "@/components/solution-view";
 import { ErrorNote, Loading } from "@/components/state";
 import { StatusBadge } from "@/components/submission-list";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { fmtDate, fmtPrecision, fmtScore } from "@/lib/format";
-import type { SubmissionDetail } from "@/lib/types";
+import type { Curves, Problem, ProblemView, SubmissionDetail } from "@/lib/types";
 
 export default function SubmissionPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +24,30 @@ export default function SubmissionPage() {
     // poll while the judge is working
     refetchInterval: (q) =>
       q.state.data && ["queued", "running"].includes(q.state.data.status) ? 1500 : false,
+  });
+
+  const done = sub?.status === "done";
+  const problem = useQuery({
+    queryKey: ["problem", sub?.problem_id],
+    queryFn: () => api<Problem>(`/problems/${sub!.problem_id}`),
+    enabled: !!sub,
+  });
+  const curves = useQuery({
+    queryKey: ["curves", sub?.problem_id, sub?.dim],
+    queryFn: () => api<Curves>(`/problems/${sub!.problem_id}/curves?dim=${sub!.dim}`),
+    enabled: done,
+  });
+  // which run to show in the landscape / solution panel: "instance-seed"
+  const [picked, setPicked] = useState<string>();
+  const run = sub?.runs.find((r) => `${r.instance_seed}-${r.seed}` === picked) ?? sub?.runs[0];
+  const kind = problem.data?.kind ?? "function";
+  const view = useQuery({
+    queryKey: ["view", sub?.problem_id, sub?.dim, run?.instance_seed],
+    queryFn: () =>
+      api<ProblemView>(
+        `/problems/${sub!.problem_id}/view?dim=${sub!.dim}&instance_seed=${run!.instance_seed}`,
+      ),
+    enabled: done && kind !== "function" && !!run,
   });
 
   if (isPending) return <Loading />;
@@ -75,8 +102,50 @@ export default function SubmissionPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium">Convergence</h2>
-            <ConvergenceChart checkpoints={sub.checkpoints} runs={sub.runs} />
+            <ConvergenceChart
+              checkpoints={sub.checkpoints}
+              runs={sub.runs}
+              overlays={curves.data?.curves.filter((c) => c.submission_id !== sub.id)}
+            />
           </section>
+
+          {kind !== "function" && run && (
+            <section>
+              <h2 className="mb-2 text-lg font-medium">
+                {kind === "landscape2d" ? "Search replay" : "Best solution found"}
+              </h2>
+              <div className="mb-3 flex items-center gap-2 text-sm">
+                <label htmlFor="run">Run</label>
+                <select
+                  id="run"
+                  className="h-8 rounded-lg border bg-background px-2 text-sm"
+                  value={`${run.instance_seed}-${run.seed}`}
+                  onChange={(e) => setPicked(e.target.value)}
+                >
+                  {sub.runs.map((r) => (
+                    <option key={`${r.instance_seed}-${r.seed}`} value={`${r.instance_seed}-${r.seed}`}>
+                      instance {r.instance_seed}, seed {r.seed}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {view.isPending && <Loading rows={2} />}
+              {view.error && <ErrorNote error={view.error} />}
+              {view.data?.grid && run.points && (
+                <LandscapePlayer
+                  key={`${run.instance_seed}-${run.seed}`}
+                  view={view.data}
+                  points={run.points}
+                />
+              )}
+              {view.data?.data &&
+                (run.solution ? (
+                  <SolutionView kind={kind} data={view.data.data} solution={run.solution} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">This run produced no solution.</p>
+                ))}
+            </section>
+          )}
 
           {failedRun && (
             <section>

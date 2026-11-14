@@ -4,7 +4,7 @@ Runs CMA-ES with restarts and SciPy differential evolution in-process (trusted c
 no sandbox) with a large budget and keeps the best value per (problem, dim, instance).
 Results are merged into data/f_ref.json; an existing better value is never replaced.
 
-    python scripts/compute_f_ref.py --dims 5 10 20 --instances 1 2 3
+    python scripts/compute_f_ref.py --problems TR-001 --instances 1 2 3
 """
 
 import argparse
@@ -54,7 +54,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--problems", nargs="+",
                     default=[p for p, v in PROBLEMS.items() if v.z_opt is None])
-    ap.add_argument("--dims", type=int, nargs="+", default=[5, 10, 20])
+    ap.add_argument("--dims", type=int, nargs="+", help="default: every dimension offered")
     ap.add_argument("--instances", type=int, nargs="+", default=[1, 2, 3])
     ap.add_argument("--budget-per-dim", type=int, default=20000)
     ap.add_argument("--repeats", type=int, default=2)
@@ -62,7 +62,7 @@ def main() -> None:
 
     store = json.loads(OUT.read_text()) if OUT.exists() else {}
     for pid in args.problems:
-        for dim in args.dims:
+        for dim in args.dims or PROBLEMS[pid].dims:
             for iseed in args.instances:
                 inst = make_instance(PROBLEMS[pid], dim, iseed)
                 found = min(

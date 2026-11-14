@@ -16,7 +16,7 @@ from judge.functions import PROBLEMS
 from .models import FRef, Run, Submission
 
 RUN_FIELDS = ("instance_seed", "seed", "status", "error", "evals", "f_best", "aocc",
-              "precision", "wall_sec", "trace", "log")
+              "precision", "wall_sec", "trace", "log", "points", "solution")
 
 
 async def load_f_ref(session: AsyncSession, problem_id: str, dim: int) -> dict[int, float]:

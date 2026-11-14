@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { ErrorNote, Loading } from "@/components/state";
 import { SubmissionList } from "@/components/submission-list";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +102,11 @@ export default function ProfilePage() {
             <div className="text-sm text-muted-foreground">{label}</div>
           </div>
         ))}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-medium">Activity</h2>
+        <ActivityHeatmap userId={p.id} />
       </section>
 
       <section>

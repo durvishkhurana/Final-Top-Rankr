@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -77,6 +77,7 @@ class ProblemOut(Model):
     summary: str
     dims: list[int]
     bound: float
+    kind: str
     is_active: bool
     submissions: int = 0
 
@@ -105,6 +106,34 @@ class BoardRow(BaseModel):
     median_precision: float | None
     iqr: float | None
     submitted_at: datetime
+
+
+class Curve(BaseModel):
+    label: str
+    is_baseline: bool
+    submission_id: int
+    median: list[float | None]  # median precision across runs at each checkpoint
+
+
+class Curves(BaseModel):
+    checkpoints: list[int]
+    curves: list[Curve]
+
+
+class ProblemView(BaseModel):
+    """What may be shown of a public instance: the landscape of a 2D demo problem, or
+    the data of a real-world problem. Hidden-function problems have no view."""
+
+    kind: str
+    lower: list[float]
+    upper: list[float]
+    grid: list[list[float]] | None = None  # precision on an n x n grid, row = y
+    data: dict[str, Any] | None = None
+
+
+class DayCount(BaseModel):
+    day: str
+    count: int
 
 
 class Template(BaseModel):
@@ -138,6 +167,8 @@ class RunDetail(RunOut):
     # 1e-8). Raw objective values are not exposed.
     precision_trace: list[float | None]
     log: str
+    points: list[list[float]] | None  # evaluated points, 2D demo problems only
+    solution: dict[str, Any] | None  # decoded best solution, real-world problems only
 
 
 class SubmissionOut(Model):
@@ -175,11 +206,6 @@ class GlobalRow(BaseModel):
     rating: float
     problems: int = 0
     members: int = 1
-
-
-class DayCount(BaseModel):
-    day: str
-    count: int
 
 
 class ProblemCount(BaseModel):

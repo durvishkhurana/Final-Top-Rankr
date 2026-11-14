@@ -88,7 +88,9 @@ async def test_cross_site_writes_are_refused(client: AsyncClient) -> None:
 
 async def test_problem_catalogue_hides_the_functions(client: AsyncClient) -> None:
     problems = (await client.get("/api/problems")).json()
-    assert len(problems) == 18 and problems[0]["dims"] == [5, 10, 20]
+    assert len(problems) == 25
+    assert {p["kind"] for p in problems} == {"function", "landscape2d", "timetable",
+                                             "facility", "routing"}
     detail = (await client.get("/api/problems/TR-008")).json()
     assert detail["name"] == "Hollow Crown" and len(detail["description"]) > 100
     assert not any(word in detail["description"] for word in ("sqrt", "sin(", "**", "x_1"))
@@ -238,9 +240,9 @@ async def test_admin(client: AsyncClient, queued: list[int], session: AsyncSessi
 
     r = await client.patch("/api/admin/problems/STD-008", json={"is_active": False})
     assert r.json()["is_active"] is False
-    assert len((await client.get("/api/problems")).json()) == 17
+    assert len((await client.get("/api/problems")).json()) == 24
     assert (await client.get("/api/problems/STD-008")).status_code == 404
-    assert len((await client.get("/api/admin/problems")).json()) == 18
+    assert len((await client.get("/api/admin/problems")).json()) == 25
 
     r = await client.post("/api/admin/problems/STD-001/baselines", json={"dim": 5})
     assert r.status_code == 201 and len(queued) == 3
@@ -256,3 +258,62 @@ async def test_admin(client: AsyncClient, queued: list[int], session: AsyncSessi
     assert r.status_code in (401, 422)
     assert len((await client.get("/api/admin/submissions")).json()) == 3
     assert await session.scalar(select(Submission.id).limit(1)) is not None
+
+
+async def test_2d_demo_keeps_points_and_exposes_only_its_own_landscape(
+    client: AsyncClient, queued: list[int]
+) -> None:
+    await signup(client, "ada")
+    sub = await submit(client, queued, "D2-001", RANDOM, dim=2)
+    assert sub["status"] == "done" and sub["budget"] == 4000
+    points = sub["runs"][0]["points"]
+    assert 500 <= len(points) <= 600 and len(points[0]) == 2 and sub["runs"][0]["solution"] is None
+
+    view = (await client.get("/api/problems/D2-001/view", params={"dim": 2})).json()
+    assert view["kind"] == "landscape2d" and len(view["grid"]) == 70 == len(view["grid"][0])
+    assert min(min(row) for row in view["grid"]) >= 0
+    # hidden functions, non-public instances and wrong dimensions have no view
+    assert (await client.get("/api/problems/STD-004/view", params={"dim": 5})).status_code == 404
+    assert (await client.get("/api/problems/D2-001/view",
+                             params={"dim": 2, "instance_seed": 99})).status_code == 404
+    assert (await client.get("/api/problems/D2-001/view", params={"dim": 5})).status_code == 404
+    hidden = await submit(client, queued, "STD-001", RANDOM)
+    assert hidden["runs"][0]["points"] is None
+
+
+@pytest.mark.parametrize(("problem", "dim", "key"), [
+    ("RW-001", 10, "slots"), ("RW-002", 6, "stops"), ("RW-003", 10, "routes")])
+async def test_real_world_problem_returns_decoded_solution(
+    client: AsyncClient, queued: list[int], problem: str, dim: int, key: str
+) -> None:
+    await signup(client, "ada")
+    sub = await submit(client, queued, problem, RANDOM, dim=dim)
+    assert sub["status"] == "done" and sub["score"] is not None
+    assert all(r["status"] == "ok" and key in r["solution"] for r in sub["runs"])
+    view = (await client.get(f"/api/problems/{problem}/view", params={"dim": dim})).json()
+    assert view["grid"] is None and view["data"] and view["lower"] == [0.0] * dim
+
+
+async def test_curves_and_activity(client: AsyncClient, queued: list[int],
+                                   session: AsyncSession) -> None:
+    ada = await signup(client, "ada")
+    sub = await submit(client, queued, "STD-001", RANDOM)
+    admin = await session.get(User, ada["id"])
+    assert admin is not None
+    admin.role = "admin"
+    await session.commit()
+    await client.post("/api/admin/problems/STD-001/baselines", json={"dim": 5})
+    await judge_all(queued)
+
+    curves = (await client.get("/api/problems/STD-001/curves", params={"dim": 5})).json()
+    assert curves["checkpoints"] == checkpoints(10000)
+    assert [c["is_baseline"] for c in curves["curves"]] == [False, True, True, True]
+    assert curves["curves"][0]["submission_id"] == sub["id"]
+    for c in curves["curves"]:
+        assert len(c["median"]) == len(curves["checkpoints"])
+        assert all(a >= b for a, b in zip(c["median"], c["median"][1:], strict=False))
+    assert (await client.get("/api/problems/STD-001/curves",
+                             params={"dim": 10})).json() == {"checkpoints": [], "curves": []}
+
+    days = (await client.get(f"/api/users/{ada['id']}/activity")).json()
+    assert len(days) == 1 and days[0]["count"] == 1

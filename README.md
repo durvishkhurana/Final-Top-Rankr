@@ -14,8 +14,9 @@ problem instances, and ranks algorithms by server-side results.
 
 ## What is built
 
-- **Judge.** 18 built-in problems (ten TopRanker originals and a standard set of eight)
-  with seeded shift and rotation instances. Submitted code runs in a locked-down
+- **Judge.** 25 built-in problems: ten TopRanker originals and a standard set of eight
+  with seeded shift and rotation instances, four two-variable demos, and three
+  real-world packs (exam timetabling, bus-stop location, delivery routing). Submitted code runs in a locked-down
   container; the objective function never enters it. Budget enforcement, convergence
   traces, AOCC scoring, and three baselines (random search, differential evolution,
   CMA-ES) judged like any submission.
@@ -24,6 +25,10 @@ problem instances, and ranks algorithms by server-side results.
   status; per-submission convergence chart and run table; per-problem leaderboards with
   baselines; global leaderboards by person, country and institution; statistics page;
   user profiles; an admin page for roles, problem visibility and baseline runs.
+- **Visuals.** Convergence chart with the top three entries and the baselines overlaid;
+  an animated replay of the search on the 2D demo landscapes; the best timetable, stop
+  placement or set of routes drawn for the real-world packs; an activity heatmap on
+  each profile.
 - **Operations.** Per-user, per-problem submission cooldown and daily cap; a job queue
   between the API and the judge; reference values that tighten automatically when a
   run beats them, with every affected submission re-scored.
@@ -48,7 +53,8 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/JUDGE.md](docs/JUDG
 
 ## Quick start
 
-Requires Docker (on Windows: Docker Desktop with the WSL2 backend).
+Requires Docker. On Windows, either Docker Desktop with the WSL2 backend, or Docker
+Engine inside a WSL2 distribution (see "Windows without Docker Desktop" below).
 
 ```bash
 cp .env.example .env
@@ -71,6 +77,19 @@ catalogue, the baselines on every problem and a set of demo users. Seeding judge
 To start without demo data, run `docker compose up -d --build --wait` and then
 `docker compose exec backend python ../scripts/seed.py`. `scripts/reset.py` removes the
 demo users and their submissions.
+
+### Windows without Docker Desktop
+
+```powershell
+wsl --install -d Ubuntu --no-launch
+wsl -d Ubuntu -u root -- sh /mnt/d/path/to/repo/scripts/install_docker_wsl.sh
+wsl --shutdown
+powershell -ExecutionPolicy Bypass -File scripts\start_windows.ps1
+```
+
+Run the other commands in this README inside the distribution, from the repository
+under `/mnt/<drive>/...`. `start_windows.ps1` keeps a hidden WSL session open, because
+WSL stops a distribution, and the containers in it, shortly after its last session ends.
 
 ## Configuration
 
@@ -126,8 +145,6 @@ python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 
 Not built yet:
 
-- Convergence overlays against other entries, 2D landscape animation, activity heatmap
-- Real-world problem packs (timetabling, facility location, routing)
 - Contests, held-out instances for final rankings, courses with invite codes
 - AI baseline and challenger, algorithm analysis, run coach, problem builder, contributed problems
 - Instructor tests, grading, code similarity, integrity signals
