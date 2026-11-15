@@ -202,3 +202,15 @@ async def test_ai_baseline_is_judged_as_a_labelled_bot(
     await judge_all(queued)
     board = (await client.get("/api/problems/STD-001/leaderboard?dim=5")).json()
     assert [row["name"] for row in board] == ["AI-written optimizer (baseline)"]
+
+
+async def test_provider_down_falls_back_to_the_other(
+        client: AsyncClient, queued: list[int], session: AsyncSession, fake: Fake) -> None:
+    await signup(client, "ada")
+    sub = await submit(client, queued, "STD-001", RANDOM)
+    fake.gemini.append(json.dumps(ANALYSIS))  # Groq has no reply queued: it answers 500
+    r = await client.post(f"/api/submissions/{sub['id']}/analysis")
+    assert r.status_code == 200, r.text
+    log = list(await session.scalars(select(LlmCall).order_by(LlmCall.id)))
+    assert [(c.provider, c.ok) for c in log] == [("groq", False), ("gemini", True)]
+    assert log[0].error == "groq request failed (HTTPStatusError)"

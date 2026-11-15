@@ -138,7 +138,7 @@ async def ask(session: AsyncSession, *, feature: str, prompt: str, schema: type[
         for attempt, name in enumerate([*providers, providers[-1]]):
             model = s.groq_model if name == "groq" else s.gemini_model
             call = LlmCall(feature=feature, provider=name, model=model, user_id=user_id,
-                           cache_key=key, ok=False, cached=False)
+                           cache_key=key, ok=False, cached=False, tokens_in=0, tokens_out=0)
             started = time.monotonic()
             try:
                 text, call.tokens_in, call.tokens_out = (
