@@ -110,7 +110,7 @@ def timetable(problem: Problem, dim: int, seed: int) -> Timetable:
     sizes = takes.sum(axis=0)
     n_slots = max(4, dim // 3)
     n_rooms = int(np.ceil(dim / n_slots)) + 1
-    capacities = np.sort(rng.integers(int(sizes.mean()), int(sizes.max()) + 5, n_rooms))[::-1]
+    capacities = np.sort(rng.integers(int(np.mean(sizes)), int(np.max(sizes)) + 5, n_rooms))[::-1]
     return Timetable(problem, dim, np.zeros(dim), np.ones(dim), sizes, conflicts,
                      capacities.astype(float), n_slots)
 
