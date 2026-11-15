@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { SimilarPairs } from "@/components/similar-pairs";
 import { Empty, ErrorNote, Loading } from "@/components/state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
@@ -92,6 +93,12 @@ export default function CourseDashboardPage() {
       <p className="text-xs text-muted-foreground">
         Scores are each student&apos;s best on the public instances of a contest task.
       </p>
+      <p className="text-sm">
+        <Link href="/tests" className="underline">
+          Tests of this course
+        </Link>
+      </p>
+      <SimilarPairs courseId={data.course.id} />
     </div>
   );
 }

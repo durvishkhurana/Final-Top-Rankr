@@ -146,6 +146,14 @@ def _expected(exam_id: int, user_id: int, q: Question) -> tuple[dict[str, Any], 
 # --- instructor: building ---------------------------------------------------------------
 
 
+@router.get("/tests/question-kit")
+async def question_kit(_: CurrentUser) -> dict[str, Any]:
+    """What the question editor offers: numeric generators with their default text, and
+    the placeholders reasoning questions may use."""
+    return {"generators": {k: text for k, (_, text) in numeric.GENERATORS.items()},
+            "facts": list(FACTS)}
+
+
 @router.get("/tests", response_model=list[ExamOut])
 async def list_exams(user: CurrentUser, session: Session) -> list[ExamOut]:
     """Tests of the courses the user teaches (all) or is enrolled in (once published)."""
@@ -244,6 +252,25 @@ async def add_question(exam_id: int, body: QuestionIn, user: CurrentUser,
     question = Question(exam_id=exam_id, position=position, kind=body.kind,
                         prompt=body.prompt.strip(), points=body.points, data=data)
     session.add(question)
+    await session.commit()
+    return question
+
+
+@router.put("/tests/{exam_id}/questions/{question_id}", response_model=QuestionOut)
+async def edit_question(exam_id: int, question_id: int, body: QuestionIn, user: CurrentUser,
+                        session: Session) -> Question:
+    """Replaces a draft question. A reasoning question's pool must be approved again."""
+    question = await _draft_question(session, exam_id, question_id, user)
+    if body.kind != question.kind:
+        raise HTTPException(422, "The kind of a question cannot change")
+    data = _check_question(body)
+    if body.kind == "reasoning":
+        problem = await session.get(Problem, data["problem_id"])
+        if problem is None or data["dim"] not in problem.dims:
+            raise HTTPException(422, "Choose a problem and dimension the students submitted to")
+        data["pool"] = question.data.get("pool", [])
+        question.pool_approved = False
+    question.prompt, question.points, question.data = body.prompt.strip(), body.points, data
     await session.commit()
     return question
 

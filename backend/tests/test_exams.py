@@ -104,6 +104,10 @@ async def test_test_lifecycle(client: AsyncClient, queued: list[int], session: A
     fake.groq.append(json.dumps({"distractors": ["crossover", "restart", "rotation"]}))
     r = await client.post(f"{base}/questions/{mcq['id']}/distractors")
     assert r.json()["distractors"][0] == "crossover"
+    r = await client.put(f"{base}/questions/{mcq['id']}", json={
+        "kind": "mcq", "prompt": mcq["prompt"],
+        "data": {"choices": ["mutation", "selection", "crossover"], "correct": 1}})
+    assert r.json()["data"]["choices"][-1] == "crossover"
 
     assert (await client.patch(base, json={"status": "live"})).status_code == 409
     fake.groq.append(json.dumps({"phrasings": [

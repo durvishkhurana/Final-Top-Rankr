@@ -271,3 +271,106 @@ export interface Contribution {
   problem_id: string | null;
   created_at: string;
 }
+
+export interface Exam {
+  id: number;
+  course_id: number;
+  course_title: string;
+  title: string;
+  description: string;
+  starts_at: string;
+  ends_at: string;
+  camera_checks: boolean;
+  status: "draft" | "live" | "closed";
+  questions: number;
+  max_total: number;
+  teaches: boolean;
+  attempt: { id: number; status: string; total: number | null } | null;
+}
+
+export interface Question {
+  id: number;
+  position: number;
+  kind: "mcq" | "numeric" | "reasoning";
+  prompt: string;
+  points: number;
+  data: {
+    choices?: string[];
+    correct?: number;
+    generator?: string;
+    problem_id?: string;
+    dim?: number;
+    rubric?: string;
+    follow_up?: boolean;
+    pool?: string[];
+  };
+  pool_approved: boolean;
+}
+
+export interface AnswerView {
+  id: number;
+  question_id: number;
+  kind: Question["kind"];
+  prompt: string;
+  choices: string[] | null;
+  max_score: number;
+  response: string;
+  follow_up: string;
+  follow_up_response: string;
+  score: number | null;
+  rationale: string;
+}
+
+export interface AttemptView {
+  id: number;
+  exam: Exam;
+  status: "in_progress" | "submitted" | "graded";
+  camera_consent: boolean;
+  total: number | null;
+  answers: AnswerView[];
+}
+
+export interface AnswerResult {
+  id: number;
+  question_id: number;
+  kind: Question["kind"];
+  prompt: string;
+  response: string;
+  follow_up: string;
+  follow_up_response: string;
+  correct: string | null;
+  score: number | null;
+  max_score: number;
+  rationale: string;
+  confidence: number | null;
+  graded_by: string;
+  flags: string[];
+  time_ms: number;
+  paste_chars: number;
+  submission_id: number | null;
+  history: { actor: string; old_score: number | null; new_score: number | null; reason: string; created_at: string }[];
+}
+
+export interface AttemptResult {
+  id: number;
+  user_id: number;
+  name: string;
+  status: string;
+  camera_consent: boolean;
+  total: number | null;
+  started_at: string;
+  submitted_at: string | null;
+  viva: string[] | null;
+  answers: AnswerResult[];
+  events: { kind: string; at: string; duration_ms: number; detail: string }[];
+}
+
+export interface SimilarPair {
+  a: number;
+  b: number;
+  a_name: string;
+  b_name: string;
+  token: number;
+  structure: number;
+  similarity: number;
+}

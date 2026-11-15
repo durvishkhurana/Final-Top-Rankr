@@ -201,6 +201,23 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
   `pending`, then to `approved` (a `C-NNN` row in `problems`, with its own `lower` and
   `upper`) or `rejected`. Their code runs only in evaluator containers.
 
+## Course tests
+
+- `exams` (a "test" in the interface) belong to a course and go draft -> live ->
+  closed. `questions` hold the kind and its data; reasoning questions keep their pool
+  of phrasings and whether the instructor approved it.
+- Starting a test creates an `attempt` and one `answer` per question with the prompt
+  as that student sees it (numeric parameters and run facts filled in). Correct
+  numeric answers are recomputed from `hash(test, student, question)` when grading and
+  are never stored with the student's view.
+- Handing in queues `grade_attempt`; closing a test hands in open attempts. Every grade
+  writes a `grade_events` row (automatic grades with no actor).
+- `integrity_events` are the browser signals; a daily worker cron job deletes rows
+  older than `INTEGRITY_LOG_RETENTION_DAYS`. See `PRIVACY.md`.
+- Code similarity (`backend/exams/similarity.py`) compares students' latest judged
+  submissions on one problem by normalised token 5-grams and syntax-tree node
+  sequences, leaving out pairs explained by a shared starter template.
+
 ## Ratings
 
 - Problem leaderboard: each user's best submission on that problem and dimension.
@@ -223,6 +240,8 @@ Interactive documentation is served by the API at `/docs`.
 | Contests | `GET/POST /api/contests`, `GET /api/contests/{id}`, `POST .../join`, `GET .../leaderboard`, `POST .../finalise` |
 | Courses | `GET/POST /api/courses`, `POST /api/courses/join`, `GET /api/courses/{id}/dashboard` |
 | AI | `GET /api/ai/status`, `GET /api/submissions/{id}/notes`, `POST /api/submissions/{id}/analysis`, `POST /api/submissions/{id}/coach` |
+| Tests | `GET/POST /api/tests`, `GET/PATCH /api/tests/{id}`, `GET/POST /api/tests/{id}/questions`, `PUT/DELETE .../questions/{qid}`, `POST .../distractors`, `.../pool`, `.../approve-pool`, `POST /api/tests/{id}/attempt`, `GET /api/attempts/{id}`, `PUT /api/answers/{id}`, `PUT /api/answers/{id}/follow-up`, `POST /api/attempts/{id}/events`, `POST /api/attempts/{id}/submit`, `GET /api/tests/{id}/results`, `POST /api/answers/{id}/grade`, `POST /api/attempts/{id}/viva` |
+| Similarity | `GET /api/courses/{id}/similarity?problem_id=&dim=`, `POST /api/courses/{id}/similarity/opinion` |
 | Contributions | `GET/POST /api/contributions`, `POST /api/contributions/build`, `GET /api/admin/contributions`, `POST /api/admin/contributions/{id}/approve|reject` |
 | Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `POST /api/admin/problems/{id}/ai-baseline`, `GET /api/admin/submissions` |
 
