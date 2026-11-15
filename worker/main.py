@@ -5,17 +5,23 @@ containers.
 """
 
 import asyncio
+import hmac
 import logging
 from typing import Any
 
 from arq.connections import RedisSettings
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import distinct_on
 
 from core.config import get_settings
 from db.base import sessionmaker
-from db.models import Submission
+from db.contributed import load_contributed
+from db.models import Contest, Contribution, FinalResult, Submission
 from db.results import judge_refs, store_result
-from judge.evaluate import judge
+from judge.contributed import smoke_test
+from judge.evaluate import judge, score_runs
 from judge.functions import PROBLEMS
+from judge.instance import make_instance
 from judge.runner import Limits
 
 log = logging.getLogger("worker")
@@ -32,6 +38,7 @@ async def judge_submission(ctx: dict[str, Any], submission_id: int) -> None:
         sub.status = "running"
         await session.commit()
         try:
+            await load_contributed(session)
             f_ref = await judge_refs(session, sub.problem_id, sub.dim)
             out = await asyncio.to_thread(
                 judge, sub.code, PROBLEMS[sub.problem_id], sub.dim, f_ref=f_ref,
@@ -44,8 +51,86 @@ async def judge_submission(ctx: dict[str, Any], submission_id: int) -> None:
             await session.commit()
 
 
+def heldout_seeds(contest_id: int, n: int = 3) -> list[int]:
+    """Instance seeds used only for a contest's final ranking. They are derived from a
+    server secret and are never stored with the contest or sent to a client."""
+    s = get_settings()
+    key = (s.heldout_secret or s.jwt_secret).encode()
+    return [10**6 + int.from_bytes(hmac.digest(key, f"{contest_id}:{k}".encode(), "sha256")[:6])
+            for k in range(n)]
+
+
+async def finalise_contest(ctx: dict[str, Any], contest_id: int) -> None:
+    """Re-runs every participant's best public submission per task on held-out
+    instances. All entries of a task are scored against the same reference values:
+    the exact optimum, or the best value any of them reached."""
+    seeds = heldout_seeds(contest_id)
+    async with sessionmaker()() as session:
+        contest = await session.get(Contest, contest_id)
+        if contest is None or contest.status != "finalising":
+            return
+        try:
+            await load_contributed(session)
+            await session.execute(delete(FinalResult).where(FinalResult.contest_id == contest_id))
+            for task in contest.tasks:
+                problem, dim = PROBLEMS[task["problem_id"]], task["dim"]
+                best = await session.scalars(
+                    select(Submission)
+                    .where(Submission.contest_id == contest_id, Submission.status == "done",
+                           Submission.problem_id == problem.id, Submission.dim == dim)
+                    .ext(distinct_on(Submission.user_id))
+                    .order_by(Submission.user_id, Submission.score.desc(), Submission.created_at))
+                entries = []
+                for sub in best.unique():
+                    out = await asyncio.to_thread(
+                        judge, sub.code, problem, dim, instance_seeds=seeds,
+                        limits=Limits.from_env(), sandbox=ctx.get("sandbox", True))
+                    entries.append((sub, out))
+                refs = {}
+                for seed in seeds:
+                    f_opt = make_instance(problem, dim, seed).f_opt
+                    values = [r["f_best"] for _, out in entries for r in out["runs"]
+                              if r["instance_seed"] == seed and r["f_best"] is not None]
+                    refs[seed] = f_opt if f_opt is not None else min(values, default=0.0)
+                for sub, out in entries:
+                    summary = score_runs(out["runs"], refs, out["budget"])
+                    session.add(FinalResult(
+                        contest_id=contest_id, user_id=sub.user_id, problem_id=problem.id,
+                        dim=dim, submission_id=sub.id, score=summary["score"],
+                        aocc=summary["aocc"], iqr=summary["iqr"],
+                        median_precision=summary["median_precision"],
+                        runs=[{"instance": seeds.index(r["instance_seed"]), "seed": r["seed"],
+                               "status": r["status"], "aocc": r["aocc"],
+                               "precision": r["precision"]} for r in out["runs"]]))
+            contest.status = "final"
+            await session.commit()
+        except Exception:
+            log.exception("finalising contest %s failed", contest_id)
+            await session.rollback()
+            contest.status = "open"  # the organiser can try again
+            await session.commit()
+
+
+async def smoke_contribution(ctx: dict[str, Any], contribution_id: int) -> None:
+    """Runs the contributed function in a sandbox before an admin sees it."""
+    async with sessionmaker()() as session:
+        item = await session.get(Contribution, contribution_id)
+        if item is None or item.status != "testing":
+            return
+        try:
+            item.smoke = await asyncio.to_thread(
+                smoke_test, item.source, item.lower, item.upper, item.dims,
+                Limits.from_env(), ctx.get("sandbox", True))
+        except Exception:
+            log.exception("smoke test of contribution %s failed", contribution_id)
+            item.smoke = {"ok": False, "checks": [
+                {"name": "the smoke test could run", "ok": False, "detail": "platform error"}]}
+        item.status = "pending" if item.smoke["ok"] else "failed"
+        await session.commit()
+
+
 class WorkerSettings:
-    functions = [judge_submission]
+    functions = [judge_submission, finalise_contest, smoke_contribution]
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 2  # each job already runs 4 sandbox containers in parallel
     job_timeout = 3600

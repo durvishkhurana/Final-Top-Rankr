@@ -9,6 +9,9 @@ TEST_URL = _BASE.rsplit("/", 1)[0] + "/topranker_test"
 os.environ["DATABASE_URL"] = TEST_URL
 os.environ["SUBMIT_COOLDOWN_SEC"] = "0"
 os.environ["FRONTEND_URL"] = "http://localhost:3000"
+# AI providers are faked in tests (ai.llm.TRANSPORT); never the real keys from .env
+os.environ["GROQ_API_KEY"] = "test-groq"
+os.environ["GEMINI_API_KEY"] = "test-gemini"
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -60,9 +63,19 @@ def queued() -> list[int]:
 
 
 @pytest.fixture
-async def client(session: AsyncSession, queued: list[int]) -> AsyncIterator[AsyncClient]:
-    async def enqueue(submission_id: int) -> None:
-        queued.append(submission_id)
+def jobs() -> list[tuple[str, int]]:
+    """Every other job the API queued."""
+    return []
+
+
+@pytest.fixture
+async def client(session: AsyncSession, queued: list[int], jobs: list[tuple[str, int]]
+                 ) -> AsyncIterator[AsyncClient]:
+    async def enqueue(job: str, target_id: int) -> None:
+        if job == "judge_submission":
+            queued.append(target_id)
+        else:
+            jobs.append((job, target_id))
 
     app.dependency_overrides[get_enqueue] = lambda: enqueue
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

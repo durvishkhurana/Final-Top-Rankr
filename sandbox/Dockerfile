@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 RUN pip install --no-cache-dir "numpy>=2,<3" "scipy>=1.14,<2"
 
-COPY harness.py /opt/harness.py
+COPY harness.py evaluator.py /opt/
 
 # One BLAS thread: the container gets one CPU and a small pid limit.
 ENV OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \

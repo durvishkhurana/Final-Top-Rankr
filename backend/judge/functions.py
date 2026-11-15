@@ -7,6 +7,7 @@ after an instance transformation (see instance.py).
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cache
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -180,6 +181,15 @@ class Problem:
     z_opt: float | None = None
     # Instance optimum/shift is drawn within this fraction of the box half-width.
     shift_frac: float = 0.4
+    dims: tuple[int, ...] = (5, 10, 20)
+    # function | landscape2d (2D, landscape shown) | timetable | facility | routing
+    kind: str = "function"
+    # Real-world packs build their own instances: factory(problem, dim, seed)
+    factory: Callable[..., Any] | None = None
+    # Contributed problems: their own box, and source evaluated in a sandbox only
+    lower: float | None = None
+    upper: float | None = None
+    source: str | None = None
 
 
 _TR = [
@@ -210,3 +220,13 @@ PROBLEMS: dict[str, Problem] = {
     **{pid: Problem(pid, name, fn, b, shift_frac=0.1) for pid, name, fn, b in _TR},
     **{pid: Problem(pid, name, fn, b, z_opt=z) for pid, name, fn, b, z in _STD},
 }
+
+# 2D demo problems: the landscape is public and sampled points are kept for the animation.
+_DEMO_2D = [
+    ("D2-001", "Rastrigin 2D", rastrigin, 5.0, 0.0),
+    ("D2-002", "Rosenbrock 2D", rosenbrock, 2.5, 1.0),
+    ("D2-003", "Ackley 2D", ackley, 32.768, 0.0),
+    ("D2-004", "Lunacek 2D", lunacek, 5.0, 2.5),
+]
+PROBLEMS.update({pid: Problem(pid, name, fn, b, z_opt=z, dims=(2,), kind="landscape2d")
+                 for pid, name, fn, b, z in _DEMO_2D})

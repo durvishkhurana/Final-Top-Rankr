@@ -1,12 +1,16 @@
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
+from ai import llm
+from ai.features import BaselineCode
 from db.models import Problem, Submission, User
 from judge import baselines
+from judge.scoring import default_budget
 
 from ..deps import AdminUser, Enqueue, Session
 from ..schemas import ActiveIn, BaselinesIn, ProblemOut, RoleIn, SubmissionOut
 from ..schemas import AdminUser as AdminUserOut
+from .ai import guarded
 from .submissions import _out
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -15,6 +19,7 @@ BASELINE_NAMES = {
     "random_search": "Random search",
     "differential_evolution": "Differential evolution (SciPy)",
     "cmaes": "CMA-ES",
+    "ai": "AI-written optimizer",
 }
 
 
@@ -84,5 +89,30 @@ async def run_baselines(problem_id: str, body: BaselinesIn, _: AdminUser, sessio
     await session.commit()
     for sub in subs:
         await session.refresh(sub)
-        await enqueue(sub.id)
+        await enqueue("judge_submission", sub.id)
     return [_out(s) for s in subs]
+
+
+@router.post("/problems/{problem_id}/ai-baseline", response_model=SubmissionOut,
+             status_code=201)
+async def ai_baseline(problem_id: str, body: BaselinesIn, admin: AdminUser, session: Session,
+                      enqueue: Enqueue) -> SubmissionOut:
+    """Asks the language model for an optimizer from the public description only, and
+    queues it as a labelled bot entry. The code runs in the sandbox like any other."""
+    problem = await session.get(Problem, problem_id)
+    if problem is None or body.dim not in problem.dims:
+        raise HTTPException(404, "Problem or dimension not found")
+    lower = problem.lower if problem.lower is not None else -problem.bound
+    upper = problem.upper if problem.upper is not None else problem.bound
+    answer: BaselineCode = await guarded(lambda: llm.ask(
+        session, feature="ai_baseline", user_id=admin.id, schema=BaselineCode,
+        prompt=llm.render("baseline.v1", name=problem.name, dim=body.dim, lower=lower,
+                          upper=upper, budget=default_budget(body.dim),
+                          description=problem.description)))
+    bot = await baseline_user(session, "ai")
+    sub = Submission(user_id=bot.id, problem_id=problem_id, dim=body.dim, code=answer.code)
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    await enqueue("judge_submission", sub.id)
+    return _out(sub)

@@ -1,110 +1,321 @@
 [
   {
-    "id": "TR-001", "name": "Cascading Tide", "category": "TopRanker originals", "level": "Easy",
-    "tags": ["coupled", "non-separable", "sinusoidal"],
+    "id": "TR-001",
+    "name": "Cascading Tide",
+    "category": "TopRanker originals",
+    "level": "Easy",
+    "tags": [
+      "coupled",
+      "non-separable",
+      "sinusoidal"
+    ],
     "summary": "A smooth, wavy landscape where every variable is tied to its neighbour.",
     "description": "Each variable interacts with the next one through an oscillating coupling term, and the last variable wraps around to the first. From a distance the surface looks gently wavy, but the best region is a single tight basin. Because no variable can be tuned on its own, methods that search one coordinate at a time make slow progress. Algorithms that learn how variables move together tend to do better."
   },
   {
-    "id": "TR-002", "name": "Phantom Plateau", "category": "TopRanker originals", "level": "Easy",
-    "tags": ["plateau", "exploration", "needle"],
+    "id": "TR-002",
+    "name": "Phantom Plateau",
+    "category": "TopRanker originals",
+    "level": "Easy",
+    "tags": [
+      "plateau",
+      "exploration",
+      "needle"
+    ],
     "summary": "Almost flat nearly everywhere, with one narrow funnel to find.",
     "description": "Across most of the search box the surface is close to flat, so neighbouring points give almost no information about where to go. A narrow, steep funnel leads down to the optimum. Local search that starts on the plateau stalls. The problem rewards broad exploration early and fast exploitation once the funnel has been found."
   },
   {
-    "id": "TR-003", "name": "Spiral Sink", "category": "TopRanker originals", "level": "Medium",
-    "tags": ["rotation", "ridges", "multimodal"],
+    "id": "TR-003",
+    "name": "Spiral Sink",
+    "category": "TopRanker originals",
+    "level": "Medium",
+    "tags": [
+      "rotation",
+      "ridges",
+      "multimodal"
+    ],
     "summary": "Spiralling ridges wrap around a central sink.",
     "description": "Pairs of consecutive variables form ridges that spiral around a central sink. Moving along any single axis keeps crossing ridges instead of following a valley. Search operators that do not depend on the orientation of the axes are needed to follow the spiral inward."
   },
   {
-    "id": "TR-004", "name": "Mirage Basin", "category": "TopRanker originals", "level": "Medium",
-    "tags": ["deceptive", "false-minima", "multimodal"],
+    "id": "TR-004",
+    "name": "Mirage Basin",
+    "category": "TopRanker originals",
+    "level": "Medium",
+    "tags": [
+      "deceptive",
+      "false-minima",
+      "multimodal"
+    ],
     "summary": "Several attractive basins compete with the true one.",
     "description": "The landscape contains several broad basins that look promising early in a run. Populations that commit quickly settle into one of them and stop improving. Finding the best region requires keeping diversity long enough to compare basins before converging."
   },
   {
-    "id": "TR-005", "name": "Recursive Ripple", "category": "TopRanker originals", "level": "Medium",
-    "tags": ["multi-scale", "multimodal", "fractal-like"],
+    "id": "TR-005",
+    "name": "Recursive Ripple",
+    "category": "TopRanker originals",
+    "level": "Medium",
+    "tags": [
+      "multi-scale",
+      "multimodal",
+      "fractal-like"
+    ],
     "summary": "Ripples on top of ripples, at several scales at once.",
     "description": "Waves at several frequencies are stacked on a shallow bowl, so the surface looks rough at every zoom level. A coarse search finds the right region but not the best point in it; a fine search gets trapped in a small ripple. Good performance needs a search that works at more than one step size."
   },
   {
-    "id": "TR-006", "name": "Tidal Lock", "category": "TopRanker originals", "level": "Hard",
-    "tags": ["constrained", "penalty", "boundary"],
+    "id": "TR-006",
+    "name": "Tidal Lock",
+    "category": "TopRanker originals",
+    "level": "Hard",
+    "tags": [
+      "constrained",
+      "penalty",
+      "boundary"
+    ],
     "summary": "The best point sits on the edge of the feasible region.",
     "description": "The objective pulls the search towards a region that violates two constraints. Violations are punished by a steep penalty, so the best feasible point lies on the boundary where the constraints become active. That boundary is narrow and steep, and algorithms that overshoot it are heavily penalised. Careful step-size control near the boundary matters."
   },
   {
-    "id": "TR-007", "name": "Vortex Core", "category": "TopRanker originals", "level": "Hard",
-    "tags": ["ill-conditioned", "rotation", "multimodal"],
+    "id": "TR-007",
+    "name": "Vortex Core",
+    "category": "TopRanker originals",
+    "level": "Hard",
+    "tags": [
+      "ill-conditioned",
+      "rotation",
+      "multimodal"
+    ],
     "summary": "A long, thin, tilted valley with bumps along the way.",
     "description": "The basin is extremely elongated: some directions are steep and one is nearly flat, and the valley is not aligned with the coordinate axes. Small local optima are scattered along it. Axis-aligned methods zigzag across the valley, and plain descent stops at a bump. Methods that adapt the shape of their search distribution are favoured."
   },
   {
-    "id": "TR-008", "name": "Hollow Crown", "category": "TopRanker originals", "level": "Hard",
-    "tags": ["ring-optimum", "symmetry", "weak-signal"],
+    "id": "TR-008",
+    "name": "Hollow Crown",
+    "category": "TopRanker originals",
+    "level": "Hard",
+    "tags": [
+      "ring-optimum",
+      "symmetry",
+      "weak-signal"
+    ],
     "summary": "Good solutions form a ring; only one point on it is best.",
     "description": "Near-optimal points lie on a ring around the centre rather than at a single location. Most algorithms reach the ring quickly and then drift around it. A weak secondary term picks out one point on the ring as the true optimum. The problem tests whether an algorithm can keep improving on a faint signal after the main structure has been found."
   },
   {
-    "id": "TR-009", "name": "Phase Shift Labyrinth", "category": "TopRanker originals", "level": "Hard",
-    "tags": ["dimension-dependent", "multimodal", "variable-frequency"],
+    "id": "TR-009",
+    "name": "Phase Shift Labyrinth",
+    "category": "TopRanker originals",
+    "level": "Hard",
+    "tags": [
+      "dimension-dependent",
+      "multimodal",
+      "variable-frequency"
+    ],
     "summary": "Each variable oscillates at its own frequency, and the pattern changes with dimension.",
     "description": "Every variable has its own oscillation frequency and phase, and both depend on the number of variables. The landscape at one dimension is therefore not a scaled copy of the landscape at another, and settings tuned for one size do not carry over. Step sizes that suit one variable are wrong for another."
   },
   {
-    "id": "TR-010", "name": "Abyss Gate", "category": "TopRanker originals", "level": "Hard",
-    "tags": ["deceptive", "non-separable", "adversarial"],
+    "id": "TR-010",
+    "name": "Abyss Gate",
+    "category": "TopRanker originals",
+    "level": "Hard",
+    "tags": [
+      "deceptive",
+      "non-separable",
+      "adversarial"
+    ],
     "summary": "The obvious directions of improvement lead away from the optimum.",
     "description": "The most deceptive problem in the original set. Local trends and the average position of good solutions both point away from the best region, which looks unremarkable from a distance. Algorithms that follow the crowd converge in the wrong place. Diversity preservation and occasional long jumps are needed to find it."
   },
   {
-    "id": "STD-001", "name": "Sphere", "category": "Standard set", "level": "Easy",
-    "tags": ["unimodal", "separable", "smooth"],
+    "id": "STD-001",
+    "name": "Sphere",
+    "category": "Standard set",
+    "level": "Easy",
+    "tags": [
+      "unimodal",
+      "separable",
+      "smooth"
+    ],
     "summary": "The simplest test: one smooth bowl.",
     "description": "A single smooth bowl with no local optima. It measures how fast an algorithm converges when nothing gets in the way, and is a useful sanity check for a new optimizer."
   },
   {
-    "id": "STD-002", "name": "Ellipsoid", "category": "Standard set", "level": "Easy",
-    "tags": ["unimodal", "ill-conditioned"],
+    "id": "STD-002",
+    "name": "Ellipsoid",
+    "category": "Standard set",
+    "level": "Easy",
+    "tags": [
+      "unimodal",
+      "ill-conditioned"
+    ],
     "summary": "A bowl stretched a million times more in some directions than others.",
     "description": "A single bowl whose curvature differs by a factor of a million between directions. With the rotation applied, the long axes are not aligned with the coordinates. It measures how well an algorithm adapts its step sizes to badly scaled problems."
   },
   {
-    "id": "STD-003", "name": "Rosenbrock", "category": "Standard set", "level": "Medium",
-    "tags": ["valley", "non-separable"],
+    "id": "STD-003",
+    "name": "Rosenbrock",
+    "category": "Standard set",
+    "level": "Medium",
+    "tags": [
+      "valley",
+      "non-separable"
+    ],
     "summary": "A curved, narrow valley that is easy to find and hard to follow.",
     "description": "Reaching the curved valley is easy; following it to the optimum is slow because the valley bends and its floor is almost flat. It tests how well an algorithm tracks a changing direction of progress."
   },
   {
-    "id": "STD-004", "name": "Rastrigin", "category": "Standard set", "level": "Medium",
-    "tags": ["multimodal", "regular"],
+    "id": "STD-004",
+    "name": "Rastrigin",
+    "category": "Standard set",
+    "level": "Medium",
+    "tags": [
+      "multimodal",
+      "regular"
+    ],
     "summary": "A bowl covered with a regular grid of local optima.",
     "description": "A bowl overlaid with a regular pattern of many local optima. The number of local optima grows exponentially with dimension. It tests whether an algorithm can see the global trend through the local structure."
   },
   {
-    "id": "STD-005", "name": "Ackley", "category": "Standard set", "level": "Medium",
-    "tags": ["multimodal", "funnel"],
+    "id": "STD-005",
+    "name": "Ackley",
+    "category": "Standard set",
+    "level": "Medium",
+    "tags": [
+      "multimodal",
+      "funnel"
+    ],
     "summary": "A nearly flat outer region with a deep central funnel.",
     "description": "Far from the optimum the surface is nearly flat with small ripples; close to it a deep funnel opens. It tests the balance between exploring the flat region and exploiting the funnel."
   },
   {
-    "id": "STD-006", "name": "Griewank", "category": "Standard set", "level": "Medium",
-    "tags": ["multimodal", "non-separable"],
+    "id": "STD-006",
+    "name": "Griewank",
+    "category": "Standard set",
+    "level": "Medium",
+    "tags": [
+      "multimodal",
+      "non-separable"
+    ],
     "summary": "A very wide bowl with many shallow, regularly spaced local optima.",
     "description": "A wide bowl with a product term that creates many shallow local optima and ties the variables together. The search box is large, so early progress is easy and the last digits are hard."
   },
   {
-    "id": "STD-007", "name": "Schwefel", "category": "Standard set", "level": "Hard",
-    "tags": ["multimodal", "deceptive"],
+    "id": "STD-007",
+    "name": "Schwefel",
+    "category": "Standard set",
+    "level": "Hard",
+    "tags": [
+      "multimodal",
+      "deceptive"
+    ],
     "summary": "The best region is far from the next-best ones.",
     "description": "The best local optima are far apart, and the landscape has no helpful global trend. Algorithms that contract towards the middle of their population are misled."
   },
   {
-    "id": "STD-008", "name": "Lunacek bi-Rastrigin", "category": "Standard set", "level": "Hard",
-    "tags": ["multimodal", "two-funnel", "deceptive"],
+    "id": "STD-008",
+    "name": "Lunacek bi-Rastrigin",
+    "category": "Standard set",
+    "level": "Hard",
+    "tags": [
+      "multimodal",
+      "two-funnel",
+      "deceptive"
+    ],
     "summary": "Two funnels; the larger one does not contain the optimum.",
     "description": "Two rippled funnels sit side by side. The larger funnel attracts most of a population but does not contain the global optimum. It tests whether an algorithm can avoid committing to the bigger basin."
+  },
+  {
+    "id": "D2-001",
+    "name": "Rastrigin 2D",
+    "category": "2D demos",
+    "level": "Easy",
+    "tags": [
+      "2D",
+      "multimodal",
+      "visual"
+    ],
+    "summary": "A bowl with a grid of local optima, in two variables so you can watch the search.",
+    "description": "A two-variable version of the Rastrigin landscape, shifted and rotated. Because it is two-dimensional, the landscape is shown as a contour map and the points your optimizer evaluated are replayed on top of it. Use it to see how an algorithm explores before trying the hidden problems."
+  },
+  {
+    "id": "D2-002",
+    "name": "Rosenbrock 2D",
+    "category": "2D demos",
+    "level": "Easy",
+    "tags": [
+      "2D",
+      "valley",
+      "visual"
+    ],
+    "summary": "The curved valley, in two variables.",
+    "description": "A two-variable curved valley, shifted and rotated. The replay shows whether an optimizer finds the valley and how well it follows the bend to the optimum."
+  },
+  {
+    "id": "D2-003",
+    "name": "Ackley 2D",
+    "category": "2D demos",
+    "level": "Easy",
+    "tags": [
+      "2D",
+      "funnel",
+      "visual"
+    ],
+    "summary": "A rippled plain with one deep funnel, in two variables.",
+    "description": "A two-variable rippled plain with a single deep funnel, shifted and rotated. The replay shows how quickly a search stops wandering the plain and commits to the funnel."
+  },
+  {
+    "id": "D2-004",
+    "name": "Lunacek 2D",
+    "category": "2D demos",
+    "level": "Medium",
+    "tags": [
+      "2D",
+      "two-funnel",
+      "visual"
+    ],
+    "summary": "Two funnels side by side; the bigger one is the wrong one.",
+    "description": "A two-variable landscape with two rippled funnels, shifted and rotated. The larger funnel does not contain the optimum. The replay makes it obvious when a population has settled in the wrong funnel."
+  },
+  {
+    "id": "RW-001",
+    "name": "Exam timetabling",
+    "category": "Real-world packs",
+    "level": "Medium",
+    "tags": [
+      "scheduling",
+      "random keys",
+      "constraints"
+    ],
+    "summary": "Place exams into time slots so that students have no clashes and every exam has a room.",
+    "description": "A set of courses must each be given an exam slot. Students are enrolled in several courses, so two of their exams in the same slot is a clash. Each slot has a limited set of rooms of different sizes; within a slot the largest exam takes the largest room. Your optimizer works on a vector with one number between 0 and 1 per course; the number picks the slot. The objective is the number of students with a clash plus the number of students without a seat, per 100 enrolments. The dimension is the number of courses. The best timetable found in a run is shown as a grid."
+  },
+  {
+    "id": "RW-002",
+    "name": "Bus-stop location",
+    "category": "Real-world packs",
+    "level": "Easy",
+    "tags": [
+      "location",
+      "map",
+      "random keys"
+    ],
+    "summary": "Place a limited number of stops so people walk as little as possible.",
+    "description": "People live at known points on a map, in groups of different sizes. You may place a fixed number of bus stops anywhere on the map. Your optimizer works on a vector with two numbers between 0 and 1 per stop, which are its coordinates. The objective is the average distance from a person to the nearest stop. The dimension is twice the number of stops. The best placement found in a run is drawn on the map."
+  },
+  {
+    "id": "RW-003",
+    "name": "Delivery routing",
+    "category": "Real-world packs",
+    "level": "Hard",
+    "tags": [
+      "routing",
+      "capacity",
+      "random keys"
+    ],
+    "summary": "Deliver to every customer with capacity-limited vehicles, driving as little as possible.",
+    "description": "Vehicles start at a depot and must deliver to every customer. Each customer needs a known amount and each vehicle can carry only so much. Your optimizer works on a vector with one number between 0 and 1 per customer; sorting the numbers gives the visiting order, and a vehicle returns to the depot whenever the next delivery would not fit. The objective is the total distance driven. The dimension is the number of customers. The best set of routes found in a run is drawn on the map."
   }
 ]

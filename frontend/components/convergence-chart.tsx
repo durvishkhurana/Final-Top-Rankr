@@ -4,6 +4,7 @@ import {
   Area,
   CartesianGrid,
   ComposedChart,
+  Legend,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -11,7 +12,8 @@ import {
   YAxis,
 } from "recharts";
 
-import type { Run } from "@/lib/types";
+import { PALETTE } from "@/components/solution-view";
+import type { Curve, Run } from "@/lib/types";
 
 function quantile(sorted: number[], q: number): number {
   const pos = (sorted.length - 1) * q;
@@ -23,8 +25,17 @@ function quantile(sorted: number[], q: number): number {
 const pow = (v: number) => `1e${Math.round(Math.log10(v))}`;
 
 /** Best-so-far precision against evaluations: median line with an interquartile band
- *  across all successful runs, both axes logarithmic. */
-export function ConvergenceChart({ checkpoints, runs }: { checkpoints: number[]; runs: Run[] }) {
+ *  across all successful runs, both axes logarithmic. Overlays are the median curves of
+ *  other entries on the same problem and dimension. */
+export function ConvergenceChart({
+  checkpoints,
+  runs,
+  overlays = [],
+}: {
+  checkpoints: number[];
+  runs: Run[];
+  overlays?: Curve[];
+}) {
   const ok = runs.filter((r) => r.status === "ok");
   const data = checkpoints.flatMap((evals, k) => {
     const values = ok
@@ -32,7 +43,15 @@ export function ConvergenceChart({ checkpoints, runs }: { checkpoints: number[];
       .filter((v): v is number => v != null)
       .sort((a, b) => a - b);
     if (values.length === 0) return [];
-    return [{ evals, median: quantile(values, 0.5), band: [quantile(values, 0.25), quantile(values, 0.75)] }];
+    const others = Object.fromEntries(overlays.map((o, i) => [`o${i}`, o.median[k] ?? undefined]));
+    return [
+      {
+        evals,
+        median: quantile(values, 0.5),
+        band: [quantile(values, 0.25), quantile(values, 0.75)],
+        ...others,
+      },
+    ];
   });
   if (data.length === 0) {
     return <p className="py-6 text-sm text-muted-foreground">No successful runs to plot.</p>;
@@ -76,15 +95,29 @@ export function ConvergenceChart({ checkpoints, runs }: { checkpoints: number[];
             />
             <Area
               dataKey="band"
-              name="Interquartile range"
+              name="This submission (25th to 75th percentile)"
+              legendType="none"
               stroke="none"
               fill="var(--foreground)"
               fillOpacity={0.15}
               isAnimationActive={false}
             />
+            {overlays.map((o, i) => (
+              <Line
+                key={o.submission_id}
+                dataKey={`o${i}`}
+                name={o.is_baseline ? o.label : `${o.label} (best)`}
+                stroke={PALETTE[i % PALETTE.length]}
+                strokeWidth={1.5}
+                strokeDasharray={o.is_baseline ? "5 4" : undefined}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ))}
+            {overlays.length > 0 && <Legend verticalAlign="top" height={32} iconType="plainline" />}
             <Line
               dataKey="median"
-              name="Median"
+              name="This submission (median)"
               stroke="var(--foreground)"
               strokeWidth={2}
               dot={false}
@@ -95,7 +128,10 @@ export function ConvergenceChart({ checkpoints, runs }: { checkpoints: number[];
       </div>
       <figcaption className="mt-1 text-xs text-muted-foreground">
         Best value found so far minus the reference value, over {ok.length} successful run
-        {ok.length === 1 ? "" : "s"}. Line: median. Band: 25th to 75th percentile. Lower is better.
+        {ok.length === 1 ? "" : "s"}. Black line: median of this submission. Band: its 25th to
+        75th percentile. Lower is better.
+        {overlays.length > 0 &&
+          " Coloured lines: median of the top entries (solid) and the baselines (dashed)."}
       </figcaption>
     </figure>
   );

@@ -2,11 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BoardTable } from "@/components/board-table";
 import { CodeEditor } from "@/components/code-editor";
+import { LandscapePlayer } from "@/components/landscape-player";
+import { SolutionView } from "@/components/solution-view";
 import { ErrorNote, Loading } from "@/components/state";
 import { SubmissionList } from "@/components/submission-list";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
-import type { Problem, Quota, Submission, Template } from "@/lib/types";
+import type { Problem, ProblemView, Quota, Submission, Template } from "@/lib/types";
 
 const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 
@@ -44,10 +46,21 @@ export default function ProblemPage() {
     enabled: !!me,
   });
 
-  const [dim, setDim] = useState<number>();
+  // opened from a contest page: submissions are entered into that contest
+  const search = useSearchParams();
+  const contestId = search.get("contest") ? Number(search.get("contest")) : null;
+  const [dim, setDim] = useState<number | undefined>(
+    search.get("dim") ? Number(search.get("dim")) : undefined,
+  );
   const [code, setCode] = useState<string>();
   const activeDim = dim ?? problem.data?.dims[0];
   const activeCode = code ?? templates.data?.[0]?.code ?? "";
+  const kind = problem.data?.kind ?? "function";
+  const view = useQuery({
+    queryKey: ["view", id, activeDim, 1],
+    queryFn: () => api<ProblemView>(`/problems/${id}/view?dim=${activeDim}`),
+    enabled: kind !== "function" && !!activeDim,
+  });
 
   // Count the cooldown down locally between quota fetches.
   const [now, setNow] = useState(() => Date.now());
@@ -61,7 +74,12 @@ export default function ProblemPage() {
 
   const submit = useMutation({
     mutationFn: () =>
-      post<Submission>("/submissions", { problem_id: id, dim: activeDim, code: activeCode }),
+      post<Submission>("/submissions", {
+        problem_id: id,
+        dim: activeDim,
+        code: activeCode,
+        contest_id: contestId,
+      }),
     onSuccess: (sub) => {
       queryClient.invalidateQueries({ queryKey: ["quota", id] });
       queryClient.invalidateQueries({ queryKey: ["my-submissions", id] });
@@ -95,7 +113,7 @@ export default function ProblemPage() {
           </div>
           <div>
             <dt className="text-muted-foreground">Budget</dt>
-            <dd>2000 × dimension evaluations</dd>
+            <dd>{activeDim ? (2000 * activeDim).toLocaleString() : "2000 × dimension"} evaluations</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Runs per submission</dt>
@@ -107,6 +125,16 @@ export default function ProblemPage() {
           </div>
         </dl>
       </div>
+
+      {contestId && (
+        <p role="status" className="rounded-lg border p-3 text-sm">
+          Submissions from this page are entered into{" "}
+          <Link href={`/contests/${contestId}`} className="underline">
+            contest #{contestId}
+          </Link>
+          .
+        </p>
+      )}
 
       <div className="flex items-center gap-2 text-sm">
         <label htmlFor="dim">Dimension</label>
@@ -121,6 +149,19 @@ export default function ProblemPage() {
           ))}
         </select>
       </div>
+
+      {view.data && (
+        <section>
+          <h2 className="mb-2 text-lg font-medium">
+            {kind === "landscape2d" ? "Landscape of public instance 1" : "Public instance 1"}
+          </h2>
+          {view.data.grid ? (
+            <LandscapePlayer view={view.data} />
+          ) : (
+            view.data.data && <SolutionView kind={kind} data={view.data.data} />
+          )}
+        </section>
+      )}
 
       <Tabs defaultValue="submit">
         <TabsList>

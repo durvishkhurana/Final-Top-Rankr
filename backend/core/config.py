@@ -24,6 +24,21 @@ class Settings(BaseSettings):
     submit_daily_cap: int = 20
     max_code_bytes: int = 100_000
 
+    # Seeds of the held-out contest instances are derived from this; defaults to JWT_SECRET.
+    heldout_secret: str = ""
+
+    # AI features: off unless a key is set. Gemini's free tier is small, so it is kept
+    # for image input and as a fallback.
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_daily_limit: int = 18
+    ai_daily_limit_per_user: int = 20
+    ai_daily_limit_global: int = 500
+    llm_price_in_per_million: float = 0.0
+    llm_price_out_per_million: float = 0.0
+
     admin_email: str = ""
     admin_password: str = ""
 

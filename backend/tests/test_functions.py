@@ -6,6 +6,7 @@ from judge.instance import make_instance
 
 from . import legacy_scalar
 
+FUNCTION_IDS = [p for p, v in PROBLEMS.items() if v.factory is None]
 TR_IDS = [p for p in PROBLEMS if p.startswith("TR-")]
 STD_IDS = [p for p in PROBLEMS if p.startswith("STD-")]
 
@@ -20,7 +21,7 @@ def test_vectorised_matches_original_scalar(pid: str, dim: int) -> None:
     np.testing.assert_allclose(problem.fn(X), expected, rtol=1e-9, atol=1e-9)
 
 
-@pytest.mark.parametrize("pid", list(PROBLEMS))
+@pytest.mark.parametrize("pid", FUNCTION_IDS)
 def test_batch_shape_and_single_point_agree(pid: str) -> None:
     problem = PROBLEMS[pid]
     X = np.random.default_rng(0).uniform(-problem.bound, problem.bound, (7, 10))
@@ -41,7 +42,7 @@ def test_standard_optimum_is_zero_and_minimal(pid: str, dim: int) -> None:
     assert np.all(problem.fn(X) >= at_opt)
 
 
-@pytest.mark.parametrize("pid", list(PROBLEMS))
+@pytest.mark.parametrize("pid", FUNCTION_IDS)
 def test_instance_is_seeded_and_in_bounds(pid: str) -> None:
     problem = PROBLEMS[pid]
     a, b, c = (make_instance(problem, 10, s) for s in (1, 1, 2))

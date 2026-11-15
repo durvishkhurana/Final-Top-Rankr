@@ -56,6 +56,8 @@ class RunResult:
     trace: list[float] = field(default_factory=list)  # best-so-far at checkpoints(budget)
     log: str = ""
     wall_sec: float = 0.0
+    x_best: list[float] | None = None
+    points: list[list[float]] | None = None  # evaluated points in order, when kept
 
 
 def docker_cmd(name: str, limits: Limits) -> list[str]:
@@ -87,9 +89,11 @@ def run(
     seed: int,
     limits: Limits | None = None,
     sandbox: bool = True,
+    keep_points: int = 0,
 ) -> RunResult:
     """Run a submission once. sandbox=False runs the harness as a plain local
-    process with no isolation: only for trusted code (tests, reference runs)."""
+    process with no isolation: only for trusted code (tests, reference runs).
+    keep_points > 0 returns up to that many evaluated points, evenly thinned."""
     limits = limits or Limits()
     name = f"tr-run-{uuid.uuid4().hex[:12]}"
     cmd = docker_cmd(name, limits) if sandbox else [sys.executable, "-I", str(HARNESS)]
@@ -123,6 +127,7 @@ def run(
 
     points = checkpoints(budget)
     result = RunResult(status="crashed")
+    seen: list[Array] = []
     start = time.monotonic()
     try:
         job = json.dumps({"code": code, "dim": dim, "lower": lower.tolist(),
@@ -150,7 +155,11 @@ def run(
                 values = np.asarray(f(X), dtype=np.float64)
             values = np.where(np.isfinite(values), values, np.inf)
             result.trace += best_so_far_at(values, result.f_best, result.evals, points)
-            result.f_best = min(result.f_best, float(np.min(values)))
+            if float(np.min(values)) < result.f_best:
+                result.f_best = float(np.min(values))
+                result.x_best = X[int(np.argmin(values))].tolist()
+            if keep_points:
+                seen.append(X)
             result.evals += n
             stdin.write(values.tobytes())
             stdin.flush()
@@ -175,5 +184,8 @@ def run(
             result.error = (f"the run ended unexpectedly (exit code {proc.returncode}); "
                             "the usual cause is exceeding the memory limit")
     result.trace += [result.f_best] * (len(points) - len(result.trace))
+    if seen:
+        every = np.concatenate(seen)
+        result.points = every[:: max(1, -(-len(every) // keep_points))].tolist()
     result.log = bytes(log).decode("utf-8", errors="replace")
     return result

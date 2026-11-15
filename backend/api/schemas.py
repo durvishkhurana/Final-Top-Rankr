@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -77,6 +77,7 @@ class ProblemOut(Model):
     summary: str
     dims: list[int]
     bound: float
+    kind: str
     is_active: bool
     submissions: int = 0
 
@@ -107,6 +108,34 @@ class BoardRow(BaseModel):
     submitted_at: datetime
 
 
+class Curve(BaseModel):
+    label: str
+    is_baseline: bool
+    submission_id: int
+    median: list[float | None]  # median precision across runs at each checkpoint
+
+
+class Curves(BaseModel):
+    checkpoints: list[int]
+    curves: list[Curve]
+
+
+class ProblemView(BaseModel):
+    """What may be shown of a public instance: the landscape of a 2D demo problem, or
+    the data of a real-world problem. Hidden-function problems have no view."""
+
+    kind: str
+    lower: list[float]
+    upper: list[float]
+    grid: list[list[float]] | None = None  # precision on an n x n grid, row = y
+    data: dict[str, Any] | None = None
+
+
+class DayCount(BaseModel):
+    day: str
+    count: int
+
+
 class Template(BaseModel):
     key: str
     name: str
@@ -119,6 +148,7 @@ class Template(BaseModel):
 class SubmitIn(BaseModel):
     problem_id: str
     dim: int
+    contest_id: int | None = None
     code: str = Field(min_length=1)
 
 
@@ -138,6 +168,8 @@ class RunDetail(RunOut):
     # 1e-8). Raw objective values are not exposed.
     precision_trace: list[float | None]
     log: str
+    points: list[list[float]] | None  # evaluated points, 2D demo problems only
+    solution: dict[str, Any] | None  # decoded best solution, real-world problems only
 
 
 class SubmissionOut(Model):
@@ -146,6 +178,7 @@ class SubmissionOut(Model):
     user_name: str
     problem_id: str
     dim: int
+    contest_id: int | None
     status: str
     error: str
     budget: int | None
@@ -175,11 +208,6 @@ class GlobalRow(BaseModel):
     rating: float
     problems: int = 0
     members: int = 1
-
-
-class DayCount(BaseModel):
-    day: str
-    count: int
 
 
 class ProblemCount(BaseModel):
@@ -219,3 +247,134 @@ class ActiveIn(BaseModel):
 
 class BaselinesIn(BaseModel):
     dim: int
+
+
+# --- contests and courses ---------------------------------------------------------------
+
+
+class Task(BaseModel):
+    problem_id: str
+    dim: int
+
+
+class ContestIn(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    description: str = Field(default="", max_length=5000)
+    tasks: list[Task] = Field(min_length=1, max_length=20)
+    starts_at: datetime
+    ends_at: datetime
+    invite_only: bool = False
+    course_id: int | None = None
+    hint_level: Literal["off", "concept", "specific"] = "specific"
+
+
+class ContestOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    tasks: list[Task]
+    starts_at: datetime
+    ends_at: datetime
+    phase: str  # upcoming | running | ended | finalising | final
+    invite_only: bool
+    course_id: int | None
+    hint_level: str
+    participants: int
+    joined: bool
+    can_manage: bool
+    invite_code: str | None  # organiser only
+
+
+class JoinIn(BaseModel):
+    code: str = Field(default="", max_length=40)
+
+
+class ContestBoardRow(BaseModel):
+    rank: int
+    user_id: int
+    name: str
+    is_baseline: bool
+    total: float
+    scores: dict[str, float]  # "problem@dim" -> score
+    final: bool  # True: scores are from held-out instances
+
+
+class CourseIn(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    description: str = Field(default="", max_length=5000)
+
+
+class CourseOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    instructor: str
+    students: int
+    teaches: bool
+    invite_code: str | None  # instructor only
+
+
+class DashboardStudent(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    scores: dict[str, float | None]  # column key -> best public score
+    submissions: int
+    last_active: datetime | None
+
+
+class Dashboard(BaseModel):
+    course: CourseOut
+    columns: list[dict[str, Any]]  # {key, contest, contest_id, problem_id, dim}
+    students: list[DashboardStudent]
+
+
+# --- AI features and contributions ------------------------------------------------------
+
+
+class AiStatus(BaseModel):
+    enabled: bool
+    remaining_today: int
+
+
+class NoteOut(Model):
+    kind: str
+    content: dict[str, Any]
+    created_at: datetime
+
+
+class ContributionIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    summary: str = Field(min_length=1, max_length=300)
+    description: str = Field(default="", max_length=5000)
+    source: str = Field(min_length=1, max_length=50_000)
+    lower: float
+    upper: float
+    dims: list[int] = Field(min_length=1, max_length=3)
+    level: Literal["Easy", "Medium", "Hard"] = "Medium"
+    tags: list[str] = Field(default_factory=list, max_length=4)
+
+
+class BuildIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    image_base64: str = Field(default="", max_length=3_000_000)
+    image_mime: str = "image/png"
+
+
+class ContributionOut(Model):
+    id: int
+    user_id: int
+    name: str
+    summary: str
+    description: str
+    source: str
+    lower: float
+    upper: float
+    dims: list[int]
+    level: str
+    tags: list[str]
+    ai_built: bool
+    status: str
+    smoke: dict[str, Any] | None
+    problem_id: str | None
+    created_at: datetime

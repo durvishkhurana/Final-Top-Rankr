@@ -3,12 +3,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from core.config import get_settings
-from db.models import Problem, Submission
+from db.models import Contest, Problem, Submission
 from db.results import ref_lookup
 from judge.scoring import checkpoints, precision
 
 from ..deps import CurrentUser, Enqueue, OptionalUser, Session
 from ..schemas import RunDetail, SubmissionDetail, SubmissionOut, SubmitIn
+from .contests import is_participant, phase
 from .problems import quota_for
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
@@ -35,11 +36,21 @@ async def submit(body: SubmitIn, user: CurrentUser, session: Session, enqueue: E
         raise HTTPException(429, f"Wait {quota.wait_sec}s before submitting to this problem again",
                             headers={"Retry-After": str(quota.wait_sec)})
 
-    sub = Submission(user_id=user.id, problem_id=problem.id, dim=body.dim, code=body.code)
+    if body.contest_id is not None:
+        contest = await session.get(Contest, body.contest_id)
+        if contest is None or not await is_participant(session, body.contest_id, user.id):
+            raise HTTPException(403, "Join the contest before submitting to it")
+        if phase(contest) != "running":
+            raise HTTPException(409, "This contest is not accepting submissions")
+        if {"problem_id": problem.id, "dim": body.dim} not in contest.tasks:
+            raise HTTPException(422, "This problem and dimension are not part of the contest")
+
+    sub = Submission(user_id=user.id, problem_id=problem.id, dim=body.dim, code=body.code,
+                     contest_id=body.contest_id)
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
-    await enqueue(sub.id)
+    await enqueue("judge_submission", sub.id)
     return _out(sub)
 
 

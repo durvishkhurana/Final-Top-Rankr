@@ -35,3 +35,6 @@ Thumbs.db
 # local caches and data (kept on D:)
 .cache/
 data/
+
+# WSL distribution disk (Docker Engine lives inside it)
+.wsl/
