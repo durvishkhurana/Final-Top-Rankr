@@ -6,6 +6,7 @@ import subprocess
 import pytest
 
 from judge import baselines
+from judge.contributed import SandboxedFunction, smoke_test
 from judge.functions import PROBLEMS
 from judge.instance import make_instance
 from judge.runner import Limits, RunResult, run
@@ -100,7 +101,18 @@ def test_output_flood_is_truncated() -> None:
 def test_hidden_function_is_not_in_the_container() -> None:
     r = probe("import os, sys\n"
               "names = [n for root, _, files in os.walk('/opt') for n in files]\n"
-              "assert names == ['harness.py'], names\n"
+              "assert sorted(names) == ['evaluator.py', 'harness.py'], names\n"
               "assert 'judge' not in sys.modules\n"
               "import judge")
     assert r.status == "error" and "ModuleNotFoundError" in r.error
+
+
+def test_contributed_function_runs_in_its_own_container() -> None:
+    sphere = "def f(X):\n    return (X ** 2).sum(axis=1)\n"
+    assert smoke_test(sphere, -5, 5, [3], Limits(timeout_sec=60))["ok"]
+    # contributed code is isolated the same way as submissions
+    escape = ("import socket\n"
+              "socket.create_connection(('1.1.1.1', 53), timeout=2)\n"
+              "def f(X):\n    return X[:, 0]\n")
+    with SandboxedFunction(escape, 3, Limits(timeout_sec=60)) as f:
+        assert not f.loaded
