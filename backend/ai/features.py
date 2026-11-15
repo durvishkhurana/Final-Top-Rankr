@@ -43,6 +43,36 @@ class BuiltProblem(BaseModel):
     tags: list[str] = Field(max_length=4)
 
 
+class Distractors(BaseModel):
+    distractors: list[str] = Field(min_length=1, max_length=6)
+
+
+class Phrasings(BaseModel):
+    phrasings: list[str] = Field(min_length=1, max_length=30)
+
+
+class FollowUp(BaseModel):
+    question: str = Field(max_length=500)
+
+
+class Grade(BaseModel):
+    level: float = Field(ge=0, le=1, description="Fraction of full marks, 0 to 1")
+    rationale: str = Field(description="One or two sentences, referring to the rubric")
+    confidence: float = Field(ge=0, le=1)
+    contradiction: bool = Field(description="True if the answers contradict the code or "
+                                            "the run facts, or each other")
+    contradiction_note: str = Field(default="", description="What contradicts what")
+
+
+class Viva(BaseModel):
+    questions: list[str] = Field(min_length=3, max_length=3)
+
+
+class SimilarityOpinion(BaseModel):
+    verdict: Literal["likely shared", "possibly shared", "probably independent"]
+    reasons: str
+
+
 def run_stats(sub: Submission, runs: list[Run]) -> dict[str, Any]:
     """Convergence facts for the coach. Everything is relative precision; no raw
     objective values, instance parameters or reference values are included."""

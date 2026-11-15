@@ -378,3 +378,192 @@ class ContributionOut(Model):
     smoke: dict[str, Any] | None
     problem_id: str | None
     created_at: datetime
+
+
+# --- course tests -------------------------------------------------------------------------
+
+
+class ExamIn(BaseModel):
+    course_id: int
+    title: str = Field(min_length=1, max_length=150)
+    description: str = Field(default="", max_length=5000)
+    starts_at: datetime
+    ends_at: datetime
+    camera_checks: bool = True
+
+
+class ExamPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=150)
+    description: str | None = Field(default=None, max_length=5000)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    camera_checks: bool | None = None
+    status: Literal["draft", "live", "closed"] | None = None
+
+
+class MyAttempt(BaseModel):
+    id: int
+    status: str
+    total: float | None
+
+
+class ExamOut(BaseModel):
+    id: int
+    course_id: int
+    course_title: str
+    title: str
+    description: str
+    starts_at: datetime
+    ends_at: datetime
+    camera_checks: bool
+    status: str
+    questions: int
+    max_total: float
+    teaches: bool
+    attempt: MyAttempt | None
+
+
+class QuestionIn(BaseModel):
+    kind: Literal["mcq", "numeric", "reasoning"]
+    prompt: str = Field(min_length=1, max_length=4000)
+    points: float = Field(default=1.0, gt=0, le=100)
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class QuestionOut(Model):
+    """Instructor view, including correct answers."""
+    id: int
+    position: int
+    kind: str
+    prompt: str
+    points: float
+    data: dict[str, Any]
+    pool_approved: bool
+
+
+class PoolIn(BaseModel):
+    pool: list[str] = Field(min_length=1, max_length=30)
+
+
+class StartIn(BaseModel):
+    consent: bool
+    camera_consent: bool = False
+
+
+class AnswerView(BaseModel):
+    """Student view: never includes a correct answer or a grade before the test closes."""
+    id: int
+    question_id: int
+    kind: str
+    prompt: str
+    choices: list[str] | None
+    max_score: float
+    response: str
+    follow_up: str
+    follow_up_response: str
+    score: float | None
+    rationale: str
+
+
+class AttemptOut(BaseModel):
+    id: int
+    exam: ExamOut
+    status: str
+    camera_consent: bool
+    total: float | None
+    answers: list[AnswerView]
+
+
+class AnswerIn(BaseModel):
+    response: str = Field(max_length=5000)
+    time_ms: int = Field(default=0, ge=0, le=86_400_000)
+    paste_chars: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class FollowUpIn(BaseModel):
+    response: str = Field(max_length=5000)
+
+
+class SaveOut(BaseModel):
+    follow_up: str
+
+
+INTEGRITY_KINDS = Literal["tab_hidden", "window_blur", "fullscreen_exit", "copy", "paste",
+                          "no_face", "multiple_faces", "head_turned", "camera_unavailable"]
+
+
+class EventIn(BaseModel):
+    kind: INTEGRITY_KINDS
+    at: datetime
+    duration_ms: int = Field(default=0, ge=0, le=86_400_000)
+    detail: str = Field(default="", max_length=200)
+
+
+class GradeIn(BaseModel):
+    score: float = Field(ge=0)
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class GradeEventOut(Model):
+    actor: str
+    old_score: float | None
+    new_score: float | None
+    reason: str
+    created_at: datetime
+
+
+class AnswerResult(BaseModel):
+    id: int
+    question_id: int
+    kind: str
+    prompt: str
+    response: str
+    follow_up: str
+    follow_up_response: str
+    correct: str | None  # mcq / numeric: computed by code
+    score: float | None
+    max_score: float
+    rationale: str
+    confidence: float | None
+    graded_by: str
+    flags: list[str]
+    time_ms: int
+    paste_chars: int
+    submission_id: int | None
+    history: list[GradeEventOut]
+
+
+class EventOut(Model):
+    kind: str
+    at: datetime
+    duration_ms: int
+    detail: str
+
+
+class AttemptResult(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    status: str
+    camera_consent: bool
+    total: float | None
+    started_at: datetime
+    submitted_at: datetime | None
+    viva: list[str] | None
+    answers: list[AnswerResult]
+    events: list[EventOut]
+
+
+class SimilarPair(BaseModel):
+    a: int
+    b: int
+    a_name: str
+    b_name: str
+    token: float
+    structure: float
+    similarity: float
+
+
+class OpinionIn(BaseModel):
+    a: int
+    b: int
