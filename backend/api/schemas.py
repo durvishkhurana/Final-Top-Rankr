@@ -265,6 +265,7 @@ class ContestIn(BaseModel):
     ends_at: datetime
     invite_only: bool = False
     course_id: int | None = None
+    hint_level: Literal["off", "concept", "specific"] = "specific"
 
 
 class ContestOut(BaseModel):
@@ -277,6 +278,7 @@ class ContestOut(BaseModel):
     phase: str  # upcoming | running | ended | finalising | final
     invite_only: bool
     course_id: int | None
+    hint_level: str
     participants: int
     joined: bool
     can_manage: bool
@@ -325,3 +327,54 @@ class Dashboard(BaseModel):
     course: CourseOut
     columns: list[dict[str, Any]]  # {key, contest, contest_id, problem_id, dim}
     students: list[DashboardStudent]
+
+
+# --- AI features and contributions ------------------------------------------------------
+
+
+class AiStatus(BaseModel):
+    enabled: bool
+    remaining_today: int
+
+
+class NoteOut(Model):
+    kind: str
+    content: dict[str, Any]
+    created_at: datetime
+
+
+class ContributionIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    summary: str = Field(min_length=1, max_length=300)
+    description: str = Field(default="", max_length=5000)
+    source: str = Field(min_length=1, max_length=50_000)
+    lower: float
+    upper: float
+    dims: list[int] = Field(min_length=1, max_length=3)
+    level: Literal["Easy", "Medium", "Hard"] = "Medium"
+    tags: list[str] = Field(default_factory=list, max_length=4)
+
+
+class BuildIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    image_base64: str = Field(default="", max_length=3_000_000)
+    image_mime: str = "image/png"
+
+
+class ContributionOut(Model):
+    id: int
+    user_id: int
+    name: str
+    summary: str
+    description: str
+    source: str
+    lower: float
+    upper: float
+    dims: list[int]
+    level: str
+    tags: list[str]
+    ai_built: bool
+    status: str
+    smoke: dict[str, Any] | None
+    problem_id: str | None
+    created_at: datetime

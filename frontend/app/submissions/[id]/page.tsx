@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { AiNotes } from "@/components/ai-notes";
 import { CodeEditor } from "@/components/code-editor";
 import { ConvergenceChart } from "@/components/convergence-chart";
 import { LandscapePlayer } from "@/components/landscape-player";
@@ -207,6 +208,13 @@ export default function SubmissionPage() {
         <section>
           <h2 className="mb-2 text-lg font-medium">Code</h2>
           <CodeEditor value={sub.code} readOnly height={360} />
+        </section>
+      )}
+
+      {sub.code && (
+        <section>
+          <h2 className="mb-2 text-lg font-medium">AI feedback</h2>
+          <AiNotes submissionId={sub.id} judged={done} />
         </section>
       )}
     </div>

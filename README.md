@@ -33,6 +33,13 @@ problem instances, and ranks algorithms by server-side results.
   a public leaderboard while the contest runs and a final ranking from held-out
   instances once the organiser closes it; courses with invite codes and an instructor
   dashboard of every student's progress.
+- **AI features** (optional, Groq and Gemini). An analysis of what a submitted
+  algorithm really is, a run coach that diagnoses the judged runs from summary
+  statistics, an AI-written baseline on the leaderboard, and a problem builder that
+  drafts a fitness function from words or a picture of the formula. See
+  [docs/AI_FEATURES.md](docs/AI_FEATURES.md).
+- **Contributed problems.** Users propose fitness functions; each is smoke-tested in a
+  sandbox container and reviewed by an admin before it joins the catalogue.
 - **Operations.** Per-user, per-problem submission cooldown and daily cap; a job queue
   between the API and the judge; reference values that tighten automatically when a
   run beats them, with every affected submission re-scored.
@@ -150,7 +157,7 @@ python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 
 Not built yet:
 
-- AI baseline and challenger, algorithm analysis, run coach, problem builder, contributed problems
+- Evolving AI challenger
 - Instructor tests, grading, code similarity, integrity signals
 - Research statistics and exports
 - Browser end-to-end tests, deployment guide

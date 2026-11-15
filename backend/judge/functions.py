@@ -186,6 +186,10 @@ class Problem:
     kind: str = "function"
     # Real-world packs build their own instances: factory(problem, dim, seed)
     factory: Callable[..., Any] | None = None
+    # Contributed problems: their own box, and source evaluated in a sandbox only
+    lower: float | None = None
+    upper: float | None = None
+    source: str | None = None
 
 
 _TR = [

@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from .contributed import bind
 from .functions import Problem
 from .instance import make_instance
 from .runner import Limits, RunResult, run
@@ -55,7 +56,7 @@ def judge(
     optimum. If it is missing the best value of these runs is used and the result
     is marked provisional."""
     budget = budget or default_budget(dim)
-    instances = {s: make_instance(problem, dim, s) for s in instance_seeds}
+    instances: dict[int, Any] = {}
     jobs = [(i, s) for i in instance_seeds for s in run_seeds]
 
     keep = MAX_POINTS if problem.kind == "landscape2d" else 0
@@ -70,7 +71,8 @@ def judge(
             return None
         return instances[i].decode(np.array(r.x_best))
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    with bind(problem, dim, limits, sandbox) as live, ThreadPoolExecutor(workers) as pool:
+        instances.update({s: make_instance(live, dim, s) for s in instance_seeds})
         results = dict(zip(jobs, pool.map(one, jobs), strict=True))
 
     provisional = False

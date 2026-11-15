@@ -41,6 +41,8 @@ in the real container.
 | Output flood | The log is read continuously and truncated to 64 kB |
 | Corrupting the protocol by printing | stdout/stderr are redirected to the log before user code is loaded |
 | Reading the hidden function | It is not in the container |
+| Contributed fitness functions | Evaluated only in their own container with the same limits (`sandbox/evaluator.py`); the worker relays points over a pipe and treats a stalled evaluator as failed evaluations |
+| Hidden data reaching a language model | Prompts get the code and relative precisions only; seeds, shifts, rotations, reference values and held-out results are never included (`backend/ai/features.py`) |
 
 Every failure is reported to the user as a run status (`error`, `timeout` or
 `crashed`) with a message. A failed run scores 0.

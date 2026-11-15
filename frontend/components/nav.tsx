@@ -52,9 +52,14 @@ export function Nav() {
             </Link>
           ))}
           {me && (
-            <Link href="/courses" className="text-muted-foreground hover:text-foreground">
-              Courses
-            </Link>
+            <>
+              <Link href="/courses" className="text-muted-foreground hover:text-foreground">
+                Courses
+              </Link>
+              <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
+                Contribute
+              </Link>
+            </>
           )}
           {me?.role === "admin" && (
             <Link href="/admin" className="text-muted-foreground hover:text-foreground">

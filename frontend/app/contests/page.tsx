@@ -33,6 +33,7 @@ function CreateContest({ onDone }: { onDone: () => void }) {
         ends_at: new Date(String(form.get("ends_at"))).toISOString(),
         invite_only: form.get("invite_only") === "on",
         course_id: form.get("course_id") ? Number(form.get("course_id")) : null,
+        hint_level: form.get("hint_level"),
         tasks: tasks.map((t) => ({ problem_id: t.split("@")[0], dim: Number(t.split("@")[1]) })),
       }),
     onSuccess: (c) => router.push(`/contests/${c.id}`),
@@ -96,6 +97,14 @@ function CreateContest({ onDone }: { onDone: () => void }) {
       <div className="flex flex-wrap items-center gap-6 text-sm">
         <label className="flex items-center gap-2">
           <input type="checkbox" name="invite_only" /> Invite code required
+        </label>
+        <label className="flex items-center gap-2">
+          AI coach
+          <select name="hint_level" defaultValue="specific" className="h-8 rounded-lg border bg-background px-2">
+            <option value="specific">specific hints</option>
+            <option value="concept">concepts only</option>
+            <option value="off">off</option>
+          </select>
         </label>
         {!!courses.data?.filter((c) => c.teaches).length && (
           <label className="flex items-center gap-2">

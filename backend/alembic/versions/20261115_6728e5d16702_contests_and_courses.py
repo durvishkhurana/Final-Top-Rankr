@@ -6,8 +6,8 @@ Revises: 42b9654a2fd2
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision: str = '6728e5d16702'
 down_revision: str | None = '42b9654a2fd2'
@@ -87,7 +87,7 @@ def downgrade() -> None:
     # WARNING: constraint name is None; this directive will fail as
     # rendered.  Add a name, or use a naming convention; see
     # https://alembic.sqlalchemy.org/en/latest/naming.html
-    op.drop_constraint(None, 'submissions', type_='foreignkey')
+    op.drop_constraint('submissions_contest_id_fkey', 'submissions', type_='foreignkey')
     op.drop_index(op.f('ix_submissions_contest_id'), table_name='submissions')
     op.drop_column('submissions', 'contest_id')
     op.drop_index(op.f('ix_final_results_contest_id'), table_name='final_results')

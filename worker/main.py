@@ -15,8 +15,10 @@ from sqlalchemy.dialects.postgresql import distinct_on
 
 from core.config import get_settings
 from db.base import sessionmaker
-from db.models import Contest, FinalResult, Submission
+from db.contributed import load_contributed
+from db.models import Contest, Contribution, FinalResult, Submission
 from db.results import judge_refs, store_result
+from judge.contributed import smoke_test
 from judge.evaluate import judge, score_runs
 from judge.functions import PROBLEMS
 from judge.instance import make_instance
@@ -36,6 +38,7 @@ async def judge_submission(ctx: dict[str, Any], submission_id: int) -> None:
         sub.status = "running"
         await session.commit()
         try:
+            await load_contributed(session)
             f_ref = await judge_refs(session, sub.problem_id, sub.dim)
             out = await asyncio.to_thread(
                 judge, sub.code, PROBLEMS[sub.problem_id], sub.dim, f_ref=f_ref,
@@ -67,6 +70,7 @@ async def finalise_contest(ctx: dict[str, Any], contest_id: int) -> None:
         if contest is None or contest.status != "finalising":
             return
         try:
+            await load_contributed(session)
             await session.execute(delete(FinalResult).where(FinalResult.contest_id == contest_id))
             for task in contest.tasks:
                 problem, dim = PROBLEMS[task["problem_id"]], task["dim"]
@@ -107,8 +111,26 @@ async def finalise_contest(ctx: dict[str, Any], contest_id: int) -> None:
             await session.commit()
 
 
+async def smoke_contribution(ctx: dict[str, Any], contribution_id: int) -> None:
+    """Runs the contributed function in a sandbox before an admin sees it."""
+    async with sessionmaker()() as session:
+        item = await session.get(Contribution, contribution_id)
+        if item is None or item.status != "testing":
+            return
+        try:
+            item.smoke = await asyncio.to_thread(
+                smoke_test, item.source, item.lower, item.upper, item.dims,
+                Limits.from_env(), ctx.get("sandbox", True))
+        except Exception:
+            log.exception("smoke test of contribution %s failed", contribution_id)
+            item.smoke = {"ok": False, "checks": [
+                {"name": "the smoke test could run", "ok": False, "detail": "platform error"}]}
+        item.status = "pending" if item.smoke["ok"] else "failed"
+        await session.commit()
+
+
 class WorkerSettings:
-    functions = [judge_submission, finalise_contest]
+    functions = [judge_submission, finalise_contest, smoke_contribution]
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 2  # each job already runs 4 sandbox containers in parallel
     job_timeout = 3600

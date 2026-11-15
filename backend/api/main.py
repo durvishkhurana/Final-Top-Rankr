@@ -8,13 +8,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from core.config import get_settings
+from db.base import sessionmaker
+from db.contributed import load_contributed
 
-from .routes import admin, auth, board, contests, courses, problems, submissions, users
+from .routes import (
+    admin,
+    ai,
+    auth,
+    board,
+    contests,
+    contribute,
+    courses,
+    problems,
+    submissions,
+    users,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.queue = await create_pool(RedisSettings.from_dsn(get_settings().redis_url))
+    async with sessionmaker()() as session:
+        await load_contributed(session)
     yield
     await app.state.queue.aclose()
 
@@ -36,7 +51,8 @@ async def reject_cross_site_writes(
     return await call_next(request)
 
 
-for module in (auth, users, problems, submissions, board, contests, courses, admin):
+for module in (auth, users, problems, submissions, board, contests, courses, admin, ai,
+               contribute):
     app.include_router(module.router, prefix="/api")
 
 

@@ -19,6 +19,12 @@ export function BoardTable({ problemId, dim }: { problemId: string; dim: number 
   if (isPending) return <Loading />;
   if (error) return <ErrorNote error={error} />;
   if (data.length === 0) return <Empty>No scored submissions at this dimension yet.</Empty>;
+  const ai = data.find((r) => r.is_baseline && r.name.startsWith("AI-written"));
+  const vsAi = (score: number) => {
+    if (!ai || ai.score <= 0) return "–";
+    const pct = Math.round((score / ai.score - 1) * 100);
+    return `${pct > 0 ? "+" : ""}${pct}%`;
+  };
 
   return (
     <Table>
@@ -29,6 +35,7 @@ export function BoardTable({ problemId, dim }: { problemId: string; dim: number 
           <TableHead className="text-right">Score</TableHead>
           <TableHead className="text-right">Median precision</TableHead>
           <TableHead className="text-right">IQR across seeds</TableHead>
+          {ai && <TableHead className="text-right">vs AI baseline</TableHead>}
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -57,6 +64,7 @@ export function BoardTable({ problemId, dim }: { problemId: string; dim: number 
               {fmtPrecision(row.median_precision)}
             </TableCell>
             <TableCell className="text-right tabular-nums">{row.iqr?.toFixed(3) ?? "–"}</TableCell>
+            {ai && <TableCell className="text-right tabular-nums">{vsAi(row.score)}</TableCell>}
             <TableCell className="text-right">
               <Link href={`/submissions/${row.submission_id}`} className="text-sm underline">
                 Runs

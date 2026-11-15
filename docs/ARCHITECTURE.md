@@ -191,6 +191,16 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
   members. The instructor's dashboard shows each student's best public score on every
   course contest task, their submission count and their last activity.
 
+## AI features and contributions
+
+- All language-model calls go through `backend/ai/llm.py` (prompts in
+  `backend/ai/prompts/`, JSON answers validated by schema, cache, daily limits, a log
+  row per call in `llm_calls`). See `AI_FEATURES.md`.
+- Analysis and coach notes are stored once per submission in `ai_notes`.
+- Contributions (`contributions`) move from `testing` (smoke test queued) to `failed` or
+  `pending`, then to `approved` (a `C-NNN` row in `problems`, with its own `lower` and
+  `upper`) or `rejected`. Their code runs only in evaluator containers.
+
 ## Ratings
 
 - Problem leaderboard: each user's best submission on that problem and dimension.
@@ -212,7 +222,9 @@ Interactive documentation is served by the API at `/docs`.
 | Boards | `GET /api/leaderboard?by=user|country|institution`, `GET /api/stats` |
 | Contests | `GET/POST /api/contests`, `GET /api/contests/{id}`, `POST .../join`, `GET .../leaderboard`, `POST .../finalise` |
 | Courses | `GET/POST /api/courses`, `POST /api/courses/join`, `GET /api/courses/{id}/dashboard` |
-| Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `GET /api/admin/submissions` |
+| AI | `GET /api/ai/status`, `GET /api/submissions/{id}/notes`, `POST /api/submissions/{id}/analysis`, `POST /api/submissions/{id}/coach` |
+| Contributions | `GET/POST /api/contributions`, `POST /api/contributions/build`, `GET /api/admin/contributions`, `POST /api/admin/contributions/{id}/approve|reject` |
+| Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `POST /api/admin/problems/{id}/ai-baseline`, `GET /api/admin/submissions` |
 
 A submission's score and convergence are public. Its code, logs and error messages are
 returned only to its author and to admins.

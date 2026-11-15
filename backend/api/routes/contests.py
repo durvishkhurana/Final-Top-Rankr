@@ -53,7 +53,8 @@ async def _out(session: AsyncSession, contest: Contest, user: User | None) -> Co
         id=contest.id, title=contest.title, description=contest.description,
         tasks=contest.tasks, starts_at=contest.starts_at, ends_at=contest.ends_at,
         phase=phase(contest), invite_only=contest.invite_code is not None,
-        course_id=contest.course_id, participants=count, can_manage=manage,
+        course_id=contest.course_id, hint_level=contest.hint_level, participants=count,
+        can_manage=manage,
         joined=user is not None and await is_participant(session, contest.id, user.id),
         invite_code=contest.invite_code if manage else None)
 
@@ -84,6 +85,7 @@ async def create(body: ContestIn, user: CurrentUser, session: Session) -> Contes
         title=body.title.strip(), description=body.description.strip(),
         tasks=[t.model_dump() for t in body.tasks], starts_at=body.starts_at,
         ends_at=body.ends_at, created_by=user.id, course_id=body.course_id,
+        hint_level=body.hint_level,
         invite_code=new_code() if body.invite_only else None)
     session.add(contest)
     await session.commit()

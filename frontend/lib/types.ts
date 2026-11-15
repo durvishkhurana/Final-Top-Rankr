@@ -202,6 +202,7 @@ export interface Contest {
   phase: "upcoming" | "running" | "ended" | "finalising" | "final";
   invite_only: boolean;
   course_id: number | null;
+  hint_level: "off" | "concept" | "specific";
   participants: number;
   joined: boolean;
   can_manage: boolean;
@@ -239,4 +240,34 @@ export interface Dashboard {
     submissions: number;
     last_active: string | null;
   }[];
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  remaining_today: number;
+}
+
+export interface AiNote {
+  kind: "analysis" | "coach";
+  content: Record<string, string | boolean>;
+  created_at: string;
+}
+
+export interface Contribution {
+  id: number;
+  user_id: number;
+  name: string;
+  summary: string;
+  description: string;
+  source: string;
+  lower: number;
+  upper: number;
+  dims: number[];
+  level: string;
+  tags: string[];
+  ai_built: boolean;
+  status: "testing" | "failed" | "pending" | "approved" | "rejected";
+  smoke: { ok: boolean; checks: { name: string; ok: boolean; detail: string }[] } | null;
+  problem_id: string | null;
+  created_at: string;
 }

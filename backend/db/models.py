@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -50,6 +50,9 @@ class Problem(Base):
     bound: Mapped[float]
     kind: Mapped[str] = mapped_column(String(20), default="function", server_default="function")
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Search box of contributed problems; None: the box is [-bound, bound]
+    lower: Mapped[float | None]
+    upper: Mapped[float | None]
 
 
 class Submission(Base):
@@ -149,6 +152,9 @@ class Contest(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(20), default="open")  # open|finalising|final
+    # AI coach in this contest: off | concept | specific
+    hint_level: Mapped[str] = mapped_column(String(20), default="specific",
+                                            server_default="specific")
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  server_default=func.now())
@@ -181,3 +187,65 @@ class FinalResult(Base):
     median_precision: Mapped[float | None]
     # per run: {instance (0-based index, not the seed), seed, status, aocc, precision}
     runs: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+
+
+class LlmCall(Base):
+    """Every request to a language model, including answers served from the cache."""
+
+    __tablename__ = "llm_calls"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    feature: Mapped[str] = mapped_column(String(40))
+    provider: Mapped[str] = mapped_column(String(20))
+    model: Mapped[str] = mapped_column(String(80))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"),
+                                                index=True)
+    cache_key: Mapped[str] = mapped_column(String(64), index=True)
+    ok: Mapped[bool]
+    cached: Mapped[bool]
+    response: Mapped[str] = mapped_column(Text, default="")
+    tokens_in: Mapped[int] = mapped_column(default=0)
+    tokens_out: Mapped[int] = mapped_column(default=0)
+    latency_ms: Mapped[int] = mapped_column(default=0)
+    cost_usd: Mapped[float] = mapped_column(default=0.0)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now(), index=True)
+
+
+class AiNote(Base):
+    """An AI answer about a submission (analysis or coach), generated once."""
+
+    __tablename__ = "ai_notes"
+    __table_args__ = (UniqueConstraint("submission_id", "kind"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(20))
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class Contribution(Base):
+    """A proposed fitness function: testing -> pending | failed -> approved | rejected."""
+
+    __tablename__ = "contributions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    summary: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)
+    lower: Mapped[float]
+    upper: Mapped[float]
+    dims: Mapped[list[int]] = mapped_column(JSON)
+    level: Mapped[str] = mapped_column(String(20))
+    tags: Mapped[list[str]] = mapped_column(JSON)
+    ai_built: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[str] = mapped_column(String(20), default="testing")
+    smoke: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    problem_id: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
