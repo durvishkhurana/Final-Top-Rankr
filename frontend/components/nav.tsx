@@ -56,6 +56,9 @@ export function Nav() {
               <Link href="/courses" className="text-muted-foreground hover:text-foreground">
                 Courses
               </Link>
+              <Link href="/tests" className="text-muted-foreground hover:text-foreground">
+                Tests
+              </Link>
               <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
                 Contribute
               </Link>

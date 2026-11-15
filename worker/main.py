@@ -7,8 +7,10 @@ containers.
 import asyncio
 import hmac
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import distinct_on
@@ -18,6 +20,8 @@ from db.base import sessionmaker
 from db.contributed import load_contributed
 from db.models import Contest, Contribution, FinalResult, Submission
 from db.results import judge_refs, store_result
+from exams.grading import grade_attempt as grade
+from exams.grading import purge_events
 from judge.contributed import smoke_test
 from judge.evaluate import judge, score_runs
 from judge.functions import PROBLEMS
@@ -129,8 +133,21 @@ async def smoke_contribution(ctx: dict[str, Any], contribution_id: int) -> None:
         await session.commit()
 
 
+async def grade_attempt(ctx: dict[str, Any], attempt_id: int) -> None:
+    async with sessionmaker()() as session:
+        await grade(session, attempt_id)
+
+
+async def purge_integrity_events(ctx: dict[str, Any]) -> None:
+    days = get_settings().integrity_log_retention_days
+    async with sessionmaker()() as session:
+        n = await purge_events(session, datetime.now(UTC) - timedelta(days=days))
+    log.info("deleted %d integrity events older than %d days", n, days)
+
+
 class WorkerSettings:
-    functions = [judge_submission, finalise_contest, smoke_contribution]
+    functions = [judge_submission, finalise_contest, smoke_contribution, grade_attempt]
+    cron_jobs = [cron(purge_integrity_events, hour={3}, minute={0})]
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 2  # each job already runs 4 sandbox containers in parallel
     job_timeout = 3600

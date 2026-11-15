@@ -249,3 +249,113 @@ class Contribution(Base):
     problem_id: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  server_default=func.now())
+
+
+class Exam(Base):
+    """A course test ("test" in the interface). draft -> live -> closed."""
+
+    __tablename__ = "exams"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"),
+                                           index=True)
+    title: Mapped[str] = mapped_column(String(150))
+    description: Mapped[str] = mapped_column(Text, default="")
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    camera_checks: Mapped[bool] = mapped_column(default=True)
+    status: Mapped[str] = mapped_column(String(20), default="draft")
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class Question(Base):
+    """kind mcq: data {choices, correct}; numeric: {generator}; reasoning: {problem_id,
+    dim, rubric, pool, follow_up}. The prompt of numeric and reasoning questions has
+    {placeholders} filled per student."""
+
+    __tablename__ = "questions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int]
+    kind: Mapped[str] = mapped_column(String(20))
+    prompt: Mapped[str] = mapped_column(Text)
+    points: Mapped[float] = mapped_column(default=1.0)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    pool_approved: Mapped[bool] = mapped_column(default=False)
+
+
+class Attempt(Base):
+    __tablename__ = "attempts"
+    __table_args__ = (UniqueConstraint("exam_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    camera_consent: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[str] = mapped_column(String(20), default="in_progress")  # |submitted|graded
+    total: Mapped[float | None]
+    viva: Mapped[list[str] | None] = mapped_column(JSON)  # instructor only
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(lazy="joined")
+
+
+class Answer(Base):
+    __tablename__ = "answers"
+    __table_args__ = (UniqueConstraint("attempt_id", "question_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id", ondelete="CASCADE"),
+                                            index=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"))
+    prompt: Mapped[str] = mapped_column(Text)  # as shown to this student
+    submission_id: Mapped[int | None] = mapped_column(
+        ForeignKey("submissions.id", ondelete="SET NULL"))  # reasoning: the run asked about
+    response: Mapped[str] = mapped_column(Text, default="")
+    follow_up: Mapped[str] = mapped_column(Text, default="")
+    follow_up_response: Mapped[str] = mapped_column(Text, default="")
+    score: Mapped[float | None]
+    max_score: Mapped[float]
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    confidence: Mapped[float | None]
+    graded_by: Mapped[str] = mapped_column(String(20), default="")  # code | ai | instructor
+    flags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    time_ms: Mapped[int] = mapped_column(default=0)
+    paste_chars: Mapped[int] = mapped_column(default=0)
+
+
+class GradeEvent(Base):
+    """Audit log: every grade an answer has had, and who gave it."""
+
+    __tablename__ = "grade_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    answer_id: Mapped[int] = mapped_column(ForeignKey("answers.id", ondelete="CASCADE"),
+                                           index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    old_score: Mapped[float | None]
+    new_score: Mapped[float | None]
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class IntegrityEvent(Base):
+    """One browser-side signal during a test. Deleted after the retention period."""
+
+    __tablename__ = "integrity_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id", ondelete="CASCADE"),
+                                            index=True)
+    kind: Mapped[str] = mapped_column(String(30))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # browser clock
+    duration_ms: Mapped[int] = mapped_column(default=0)
+    detail: Mapped[str] = mapped_column(String(200), default="")
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                  server_default=func.now(), index=True)

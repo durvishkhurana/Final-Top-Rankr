@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     llm_price_in_per_million: float = 0.0
     llm_price_out_per_million: float = 0.0
 
+    # Browser integrity signals of tests are deleted after this many days
+    integrity_log_retention_days: int = 30
+
     admin_email: str = ""
     admin_password: str = ""
 

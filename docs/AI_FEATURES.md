@@ -65,6 +65,46 @@ requests go to Gemini). The model drafts the name, description, box, dimensions 
 Python source. The draft is a normal contribution: it is smoke-tested in a sandbox and
 waits for an admin.
 
+## In course tests
+
+All numbers in these features (scores, points, the facts quoted to a student) are
+computed by the platform. The model writes text and, when grading, a level between 0
+and 1 that the platform multiplies by the question's points.
+
+**Distractors** (`POST /api/tests/{id}/questions/{qid}/distractors`). Suggests wrong
+choices for a multiple-choice question. They are only suggestions: the instructor adds
+the ones they want.
+
+**Pools of phrasings** (`POST .../pool`). For a one-line reasoning question about the
+student's own run, the model writes about 20 phrasings of the instructor's template.
+Phrasings may use only placeholders the platform can fill (`{budget}`,
+`{last_improvement_evals}`, `{final_precision}` and a few more); others are dropped. The
+instructor edits and approves the pool, and a test cannot be published before every
+pool is approved. Each student gets one phrasing, chosen by
+`hash(test, student, question)` and filled with facts from their own latest judged
+submission (relative precisions and shares of the budget, as for the coach).
+
+**Follow-up** (when the student saves a reasoning answer). One adaptive follow-up
+question generated from the answer, the student's code and the run facts. If the model
+is unavailable the test continues without it. This does not count against the
+student's daily AI limit.
+
+**Grading** (worker job after hand-in). Reasoning answers are graded against the
+instructor's rubric. The model returns a level, a short rationale, a confidence, and
+whether the answer, the follow-up answer, the code and the run facts contradict each
+other; contradictions become flags for the instructor. The student's text is passed as
+data and the prompt tells the model to ignore instructions in it; the instructor can
+change any grade, and every grade (automatic or manual) is kept in an audit log.
+Multiple-choice and numeric answers are graded by code only.
+
+**Viva questions** (`POST /api/attempts/{id}/viva`, instructor). Three questions about
+the student's own code to ask in person. Only the instructor sees them.
+
+**Similarity second opinion** (`POST /api/courses/{id}/similarity/opinion`,
+instructor). For one pair found by the token and syntax-tree comparison, the model gives
+a verdict (likely shared, possibly shared, probably independent) with reasons. It is
+not asked, and does not claim, to detect AI-written code.
+
 ## Contributed problems
 
 Anyone signed in can propose a function `f(X)` at `/contribute`

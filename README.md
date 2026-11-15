@@ -33,6 +33,14 @@ problem instances, and ranks algorithms by server-side results.
   a public leaderboard while the contest runs and a final ranking from held-out
   instances once the organiser closes it; courses with invite codes and an instructor
   dashboard of every student's progress.
+- **Course tests.** Multiple-choice questions (with suggested distractors),
+  personalised numeric tasks whose answers are computed by code, one-line reasoning
+  questions filled with facts from each student's own runs plus an adaptive follow-up,
+  AI-assisted grading against the instructor's rubric with overrides and an audit log,
+  viva questions for the instructor, and code similarity within a course.
+- **Integrity signals.** With consent, tests record tab switches, copy and paste, and
+  (optionally, on the student's device only) face-presence checks as an event log for the
+  instructor; nothing fails a student automatically. See [docs/PRIVACY.md](docs/PRIVACY.md).
 - **AI features** (optional, Groq and Gemini). An analysis of what a submitted
   algorithm really is, a run coach that diagnoses the judged runs from summary
   statistics, an AI-written baseline on the leaderboard, and a problem builder that
@@ -158,7 +166,6 @@ python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 Not built yet:
 
 - Evolving AI challenger
-- Instructor tests, grading, code similarity, integrity signals
 - Research statistics and exports
 - Browser end-to-end tests, deployment guide
 
