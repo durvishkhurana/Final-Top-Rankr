@@ -16,6 +16,7 @@ from .routes import (
     ai,
     auth,
     board,
+    challengers,
     contests,
     contribute,
     courses,
@@ -54,7 +55,7 @@ async def reject_cross_site_writes(
 
 
 for module in (auth, users, problems, submissions, board, contests, courses, admin, ai,
-               contribute, exams, research):
+               contribute, exams, research, challengers):
     app.include_router(module.router, prefix="/api")
 
 

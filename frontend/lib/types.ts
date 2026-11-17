@@ -411,3 +411,29 @@ export interface Comparison {
   friedman_p: number | null;
   alpha: number;
 }
+
+export interface Generation {
+  number: number;
+  status: "running" | "done" | "failed";
+  approach: string;
+  changes: string;
+  error: string;
+  submission_id: number | null;
+  score: number | null;
+  is_champion: boolean;
+  created_at: string;
+}
+
+export interface Challenger {
+  id: number;
+  problem_id: string;
+  dim: number;
+  active: boolean;
+  generations: number;
+  running: boolean;
+  best_score: number | null;
+}
+
+export interface ChallengerDetail extends Challenger {
+  history: Generation[];
+}

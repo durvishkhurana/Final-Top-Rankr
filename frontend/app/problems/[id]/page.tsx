@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BoardTable } from "@/components/board-table";
+import { ChallengerPanel } from "@/components/challenger-panel";
 import { CodeEditor } from "@/components/code-editor";
 import { LandscapePlayer } from "@/components/landscape-player";
 import { SolutionView } from "@/components/solution-view";
@@ -227,7 +228,12 @@ export default function ProblemPage() {
         </TabsContent>
 
         <TabsContent value="board" className="pt-3">
-          {activeDim && <BoardTable problemId={p.id} dim={activeDim} />}
+          {activeDim && (
+            <>
+              <BoardTable problemId={p.id} dim={activeDim} />
+              <ChallengerPanel problemId={p.id} dim={activeDim} />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="mine" className="pt-3">

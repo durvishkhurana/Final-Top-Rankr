@@ -44,7 +44,9 @@ problem instances, and ranks algorithms by server-side results.
   instructor; nothing fails a student automatically. See [docs/PRIVACY.md](docs/PRIVACY.md).
 - **AI features** (optional, Groq and Gemini). An analysis of what a submitted
   algorithm really is, a run coach that diagnoses the judged runs from summary
-  statistics, an AI-written baseline on the leaderboard, and a problem builder that
+  statistics, an AI-written baseline on the leaderboard, an evolving AI challenger that
+  rewrites its own optimizer one generation at a time from the judge's feedback, and a
+  problem builder that
   drafts a fitness function from words or a picture of the formula. See
   [docs/AI_FEATURES.md](docs/AI_FEATURES.md).
 - **Research statistics and exports.** A research page that compares chosen entries on
@@ -175,7 +177,6 @@ python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 
 Not built yet:
 
-- Evolving AI challenger
 - Browser end-to-end tests, deployment guide
 
 ## License

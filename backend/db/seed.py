@@ -47,6 +47,27 @@ async def load_f_refs(session: AsyncSession, path: Path) -> int:
     return n
 
 
+BOT_NAMES = {
+    "random_search": "Random search",
+    "differential_evolution": "Differential evolution (SciPy)",
+    "cmaes": "CMA-ES",
+    "ai": "AI-written optimizer",
+    "challenger": "AI challenger (evolving)",
+}
+
+
+async def bot_user(session: AsyncSession, key: str) -> User:
+    """The account a baseline or AI entry is submitted under; it cannot sign in."""
+    email = f"{key}@baseline.invalid"
+    user = await session.scalar(select(User).where(User.email == email))
+    if user is None:
+        user = User(email=email, name=f"{BOT_NAMES[key]} (baseline)", password_hash="!",
+                    is_bot=True)
+        session.add(user)
+        await session.flush()
+    return user
+
+
 async def ensure_admin(session: AsyncSession) -> User | None:
     s = get_settings()
     if not s.admin_email or not s.admin_password:

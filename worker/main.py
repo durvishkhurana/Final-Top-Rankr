@@ -15,10 +15,19 @@ from arq.connections import RedisSettings
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import distinct_on
 
+from ai.challenger import evolve
 from core.config import get_settings
 from db.base import sessionmaker
 from db.contributed import load_contributed
-from db.models import AuthEvent, Contest, Contribution, FinalResult, RefreshToken, Submission
+from db.models import (
+    AuthEvent,
+    Challenger,
+    Contest,
+    Contribution,
+    FinalResult,
+    RefreshToken,
+    Submission,
+)
 from db.results import judge_refs, store_result
 from exams.grading import grade_attempt as grade
 from exams.grading import purge_events
@@ -138,6 +147,23 @@ async def grade_attempt(ctx: dict[str, Any], attempt_id: int) -> None:
         await grade(session, attempt_id)
 
 
+async def evolve_challenger(ctx: dict[str, Any], challenger_id: int) -> None:
+    """Writes one generation of a challenger and judges it here, before returning."""
+    async with sessionmaker()() as session:
+        gen = await evolve(session, challenger_id,
+                           lambda submission_id: judge_submission(ctx, submission_id))
+    if gen is not None:
+        log.info("challenger %s generation %s: %s", challenger_id, gen.number, gen.status)
+
+
+async def evolve_challengers(ctx: dict[str, Any]) -> None:
+    """Daily: one generation of every active challenger, within the AI daily limits."""
+    async with sessionmaker()() as session:
+        ids = list(await session.scalars(select(Challenger.id).where(Challenger.active)))
+    for challenger_id in ids:
+        await evolve_challenger(ctx, challenger_id)
+
+
 async def purge_old_rows(ctx: dict[str, Any]) -> None:
     """Daily: integrity signals past their retention, expired sign-in sessions, and
     account events older than any rate-limit window."""
@@ -152,8 +178,10 @@ async def purge_old_rows(ctx: dict[str, Any]) -> None:
 
 
 class WorkerSettings:
-    functions = [judge_submission, finalise_contest, smoke_contribution, grade_attempt]
-    cron_jobs = [cron(purge_old_rows, hour={3}, minute={0})]
+    functions = [judge_submission, finalise_contest, smoke_contribution, grade_attempt,
+                 evolve_challenger]
+    cron_jobs = [cron(purge_old_rows, hour={3}, minute={0}),
+                 cron(evolve_challengers, hour={4}, minute={0})]
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 2  # each job already runs 4 sandbox containers in parallel
     job_timeout = 3600

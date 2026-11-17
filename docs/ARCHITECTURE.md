@@ -202,6 +202,11 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
   `backend/ai/prompts/`, JSON answers validated by schema, cache, daily limits, a log
   row per call in `llm_calls`). See `AI_FEATURES.md`.
 - Analysis and coach notes are stored once per submission in `ai_notes`.
+- Evolving AI challengers (`challengers`, one per problem and dimension) keep every
+  attempt in `challenger_generations` (running -> done or failed), each linked to the
+  submission that was judged and to the champion it started from. The worker job
+  `evolve_challenger` writes and judges one generation; a daily cron job runs it for
+  every active challenger.
 - Contributions (`contributions`) move from `testing` (smoke test queued) to `failed` or
   `pending`, then to `approved` (a `C-NNN` row in `problems`, with its own `lower` and
   `upper`) or `rejected`. Their code runs only in evaluator containers.
@@ -249,6 +254,7 @@ Interactive documentation is served by the API at `/docs`.
 | AI | `GET /api/ai/status`, `GET /api/submissions/{id}/notes`, `POST /api/submissions/{id}/analysis`, `POST /api/submissions/{id}/coach` |
 | Tests | `GET/POST /api/tests`, `GET/PATCH /api/tests/{id}`, `GET/POST /api/tests/{id}/questions`, `PUT/DELETE .../questions/{qid}`, `POST .../distractors`, `.../pool`, `.../approve-pool`, `POST /api/tests/{id}/attempt`, `GET /api/attempts/{id}`, `PUT /api/answers/{id}`, `PUT /api/answers/{id}/follow-up`, `POST /api/attempts/{id}/events`, `POST /api/attempts/{id}/submit`, `GET /api/tests/{id}/results`, `POST /api/answers/{id}/grade`, `POST /api/attempts/{id}/viva` |
 | Similarity | `GET /api/courses/{id}/similarity?problem_id=&dim=`, `POST /api/courses/{id}/similarity/opinion` |
+| Challengers | `GET /api/challengers?problem_id=&dim=`, `GET /api/challengers/{id}`; admin: `POST /api/challengers`, `PATCH /api/challengers/{id}`, `POST /api/challengers/{id}/evolve` |
 | Contributions | `GET/POST /api/contributions`, `POST /api/contributions/build`, `GET /api/admin/contributions`, `POST /api/admin/contributions/{id}/approve|reject` |
 | Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `POST /api/admin/problems/{id}/ai-baseline`, `GET /api/admin/submissions` |
 

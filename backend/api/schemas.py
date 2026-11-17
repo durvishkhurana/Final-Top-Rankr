@@ -619,3 +619,37 @@ class Comparison(BaseModel):
     blocks: int
     friedman_p: float | None
     alpha: float
+
+
+# --- AI challenger ----------------------------------------------------------------------
+
+
+class ChallengerIn(BaseModel):
+    problem_id: str
+    dim: int
+
+
+class GenerationOut(BaseModel):
+    number: int
+    status: str  # running | done | failed
+    approach: str
+    changes: str
+    error: str
+    submission_id: int | None
+    score: float | None
+    is_champion: bool
+    created_at: datetime
+
+
+class ChallengerOut(BaseModel):
+    id: int
+    problem_id: str
+    dim: int
+    active: bool
+    generations: int
+    running: bool
+    best_score: float | None
+
+
+class ChallengerDetail(ChallengerOut):
+    history: list[GenerationOut]

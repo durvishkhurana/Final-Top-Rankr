@@ -23,13 +23,12 @@ sys.path.insert(0, str(ROOT / "backend"))
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-from api.routes.admin import baseline_user  # noqa: E402
 from core.config import get_settings  # noqa: E402
 from core.security import hash_password  # noqa: E402
 from db.base import sessionmaker  # noqa: E402
 from db.models import Problem, Submission, User  # noqa: E402
 from db.results import judge_refs, store_result  # noqa: E402
-from db.seed import ensure_admin, load_f_refs, sync_catalogue  # noqa: E402
+from db.seed import bot_user, ensure_admin, load_f_refs, sync_catalogue  # noqa: E402
 from judge import baselines, templates  # noqa: E402
 from judge.evaluate import judge  # noqa: E402
 from judge.functions import PROBLEMS  # noqa: E402
@@ -79,7 +78,7 @@ async def seed_baselines(session: AsyncSession) -> None:
     print("Judging baselines (this takes a while)...")
     problems = list(await session.scalars(select(Problem).order_by(Problem.id)))
     for key in baselines.NAMES:
-        bot = await baseline_user(session, key)
+        bot = await bot_user(session, key)
         await session.commit()
         done = set((await session.execute(
             select(Submission.problem_id, Submission.dim)

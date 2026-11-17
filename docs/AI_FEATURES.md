@@ -59,6 +59,29 @@ sandbox like any submission and appears on the leaderboard as the bot entry
 "AI-written optimizer (baseline)". When it is present, the leaderboard shows each
 entry's score relative to it.
 
+**Evolving AI challenger** (`/api/challengers`, started and steered by admins). An
+optimizer written by the model that improves itself one generation at a time on one
+problem and dimension (`backend/ai/challenger.py`, prompt `challenger.v1.md`):
+
+1. Generation 1 is written from the public description alone (the AI baseline prompt).
+2. Every later generation starts from the champion, the best judged generation so far.
+   The model gets the champion's code and approach, the same summary statistics the run
+   coach gets (relative precisions only), the last ten generations with their scores,
+   and the best score of a human participant on that problem and dimension. It returns
+   the new code, a one-sentence approach and what it changed.
+3. The code is judged in the sandbox like any submission, under the bot account "AI
+   challenger (evolving)". A worse generation is kept in the history; the champion
+   only changes when a generation scores higher. The champion is the challenger's
+   leaderboard entry, flagged like the baselines and left out of the global rating.
+
+A worker job evolves every active challenger once a day at 04:00 UTC; an admin can also
+press "Evolve now" or pause a challenger. Only one generation of a challenger runs at a
+time. Each generation is one AI request counted against the challenger bot's own daily
+limit (`AI_DAILY_LIMIT_PER_USER`) and the global one. When the model is unavailable the
+generation is recorded as failed with the reason, and the champion stays. The problem
+page shows every generation's score, approach and changes; its code stays private like
+any submission's.
+
 **Problem builder** (`POST /api/contributions/build`). A user describes a fitness
 function in words, optionally with a PNG or JPEG of the formula (at most 2 MB; image
 requests go to Gemini). The model drafts the name, description, box, dimensions and
