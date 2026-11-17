@@ -61,7 +61,14 @@ problem instances, and ranks algorithms by server-side results.
   between the API and the judge; reference values that tighten automatically when a
   run beats them, with every affected submission re-scored.
 
-Screenshots: _to be added._
+## Screenshots
+
+| | |
+|---|---|
+| ![Problem catalogue](docs/screenshots/problems.png) | ![A judged submission with its convergence against the baselines](docs/screenshots/submission.png) |
+| Problem catalogue | A judged submission: score, convergence against the baselines, every run |
+| ![Global leaderboard](docs/screenshots/leaderboard.png) | ![Statistical comparison on the research page](docs/screenshots/research.png) |
+| Global leaderboard | Research page: confidence intervals, pairwise tests, runtime distributions |
 
 ## Architecture
 
