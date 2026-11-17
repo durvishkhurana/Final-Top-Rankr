@@ -580,3 +580,42 @@ class SimilarPair(BaseModel):
 class OpinionIn(BaseModel):
     a: int
     b: int
+
+
+# --- research ---------------------------------------------------------------------------
+
+
+class ComparedEntry(BaseModel):
+    submission_id: int
+    label: str
+    is_baseline: bool
+    score: float
+    runs: int
+    mean: float  # of per-run AOCC
+    median: float
+    ci_low: float  # 95% bootstrap interval of the mean
+    ci_high: float
+    mean_rank: float | None = None  # over the shared (instance, seed) runs; 1 is best
+    ecdf: list[float]  # fraction of (run, target) pairs reached, per checkpoint
+
+
+class PairTest(BaseModel):
+    a: int
+    b: int
+    p: float  # Mann-Whitney U, two-sided
+    p_holm: float
+    a12: float  # probability that a run of a beats a run of b
+    significant: bool
+    better: int | None
+
+
+class Comparison(BaseModel):
+    problem_id: str
+    dim: int
+    targets: list[float]
+    checkpoints: list[int]
+    entries: list[ComparedEntry]
+    pairs: list[PairTest]
+    blocks: int
+    friedman_p: float | None
+    alpha: float

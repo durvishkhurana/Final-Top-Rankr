@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AiNotes } from "@/components/ai-notes";
 import { CodeEditor } from "@/components/code-editor";
 import { ConvergenceChart } from "@/components/convergence-chart";
+import { Downloads } from "@/components/downloads";
 import { LandscapePlayer } from "@/components/landscape-player";
 import { SolutionView } from "@/components/solution-view";
 import { ErrorNote, Loading } from "@/components/state";
@@ -158,7 +159,10 @@ export default function SubmissionPage() {
           )}
 
           <section>
-            <h2 className="mb-2 text-lg font-medium">Runs</h2>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-medium">Runs</h2>
+              <Downloads path={`/submissions/${sub.id}/export`} label="Runs with convergence:" />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>

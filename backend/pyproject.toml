@@ -24,7 +24,7 @@ dependencies = [
 dev = ["ruff", "mypy", "pytest"]
 
 [tool.setuptools.packages.find]
-include = ["judge*", "api*", "core*", "db*", "ai*", "exams*"]
+include = ["judge*", "api*", "core*", "db*", "ai*", "exams*", "research*"]
 
 [tool.ruff]
 line-length = 100
@@ -45,6 +45,10 @@ strict = true
 warn_return_any = false
 # baselines and templates are submissions (untyped by contract), not platform code
 exclude = ['\.venv', 'judge/(baselines|templates)/(?!__init__)']
+
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { Downloads } from "@/components/downloads";
 import { Empty, ErrorNote, Loading } from "@/components/state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,9 +148,12 @@ export default function ContestPage() {
       </section>
 
       <section>
-        <h2 className="mb-1 text-lg font-medium">
-          {c.phase === "final" ? "Final ranking" : "Public leaderboard"}
-        </h2>
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-medium">
+            {c.phase === "final" ? "Final ranking" : "Public leaderboard"}
+          </h2>
+          {!!board.data?.length && <Downloads path={`/contests/${c.id}/leaderboard/export`} />}
+        </div>
         <p className="mb-3 text-sm text-muted-foreground">
           {c.phase === "final"
             ? "Scores of each participant's best submission per task, re-run on held-out instances."

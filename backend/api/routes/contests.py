@@ -1,7 +1,7 @@
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from db.models import (
 )
 
 from ..deps import CurrentUser, Enqueue, OptionalUser, Session
+from ..export import Format, table
 from ..schemas import ContestBoardRow, ContestIn, ContestOut, JoinIn
 
 router = APIRouter(prefix="/contests", tags=["contests"])
@@ -152,6 +153,18 @@ async def leaderboard(contest_id: int, session: Session) -> list[ContestBoardRow
                             is_baseline=users[uid].is_bot, total=sum(per.values()),
                             scores=per, final=final)
             for i, (uid, per) in enumerate(ordered, start=1)]
+
+
+@router.get("/{contest_id}/leaderboard/export")
+async def export_leaderboard(contest_id: int, session: Session, format: Format = "csv"
+                             ) -> Response:
+    """The ranking with one column per task (problem@dim)."""
+    contest = await _get(session, contest_id)
+    tasks = [f"{t['problem_id']}@{t['dim']}" for t in contest.tasks]
+    rows = [{**r.model_dump(exclude={"scores"}), **{t: r.scores.get(t) for t in tasks}}
+            for r in await leaderboard(contest_id, session)]
+    return table(["rank", "user_id", "name", "is_baseline", "final", "total", *tasks], rows,
+                 f"contest-{contest_id}-ranking", format)
 
 
 @router.post("/{contest_id}/finalise", response_model=ContestOut)

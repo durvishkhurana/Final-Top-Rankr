@@ -7,3 +7,7 @@ export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 export const fmtInt = (n: number) => n.toLocaleString();
+
+/** Ticks of a logarithmic evaluations axis: powers of ten up to the budget, then the budget. */
+export const evalTicks = (last: number) =>
+  [1, 10, 100, 1000, 10000, 100000].filter((t) => t < last * 0.6).concat(last);

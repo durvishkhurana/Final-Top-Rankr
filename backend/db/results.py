@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from judge.evaluate import score_runs
 from judge.functions import PROBLEMS
+from judge.scoring import precision
 
 from .models import FRef, Run, Submission
 
@@ -34,6 +35,12 @@ async def ref_lookup(session: AsyncSession, problem_id: str, dim: int
         f_opt = float(problem.fn(np.full((1, dim), problem.z_opt))[0])
         return lambda seed: f_opt
     return (await load_f_ref(session, problem_id, dim)).get
+
+
+def precision_trace(run: Run, f_ref: float | None) -> list[float | None]:
+    """Precision at each checkpoint of a run; None where nothing is known or it failed."""
+    return [None if v is None or f_ref is None or run.status != "ok" else precision(v, f_ref)
+            for v in run.trace]
 
 
 async def store_result(session: AsyncSession, sub: Submission, out: dict[str, Any]) -> None:

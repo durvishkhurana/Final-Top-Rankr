@@ -375,3 +375,39 @@ export interface SimilarPair {
   structure: number;
   similarity: number;
 }
+
+export interface ComparedEntry {
+  submission_id: number;
+  label: string;
+  is_baseline: boolean;
+  score: number;
+  runs: number;
+  mean: number;
+  median: number;
+  ci_low: number;
+  ci_high: number;
+  mean_rank: number | null;
+  ecdf: number[];
+}
+
+export interface PairTest {
+  a: number;
+  b: number;
+  p: number;
+  p_holm: number;
+  a12: number;
+  significant: boolean;
+  better: number | null;
+}
+
+export interface Comparison {
+  problem_id: string;
+  dim: number;
+  targets: number[];
+  checkpoints: number[];
+  entries: ComparedEntry[];
+  pairs: PairTest[];
+  blocks: number;
+  friedman_p: number | null;
+  alpha: number;
+}

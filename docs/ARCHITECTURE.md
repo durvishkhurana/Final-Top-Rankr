@@ -242,6 +242,8 @@ Interactive documentation is served by the API at `/docs`.
 | Problems | `GET /api/problems`, `/problems/{id}`, `/problems/{id}/leaderboard?dim=`, `/problems/{id}/quota`, `/templates` |
 | Submissions | `POST /api/submissions`, `GET /api/submissions`, `GET /api/submissions/{id}` |
 | Boards | `GET /api/leaderboard?by=user|country|institution`, `GET /api/stats` |
+| Research | `GET /api/research/compare?problem_id=&dim=&ids=`, `GET /api/research/runs?...&format=csv|json` |
+| Exports | `GET /api/submissions/{id}/export`, `GET /api/problems/{id}/leaderboard/export?dim=`, `GET /api/contests/{id}/leaderboard/export` (all take `format=csv|json`) |
 | Contests | `GET/POST /api/contests`, `GET /api/contests/{id}`, `POST .../join`, `GET .../leaderboard`, `POST .../finalise` |
 | Courses | `GET/POST /api/courses`, `POST /api/courses/join`, `GET /api/courses/{id}/dashboard` |
 | AI | `GET /api/ai/status`, `GET /api/submissions/{id}/notes`, `POST /api/submissions/{id}/analysis`, `POST /api/submissions/{id}/coach` |
