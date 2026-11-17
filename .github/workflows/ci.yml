@@ -54,3 +54,51 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: topranker
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: topranker
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U topranker" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      # throwaway values for the CI stack only
+      DATABASE_URL: postgresql+asyncpg://topranker:ci-only@localhost:5432/topranker
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-only-not-a-real-secret
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ci-only-admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -e backend
+      - run: sh scripts/build_sandbox.sh
+      - run: npm ci --no-fund --no-audit
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: sh scripts/e2e.sh
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            /tmp/topranker-e2e

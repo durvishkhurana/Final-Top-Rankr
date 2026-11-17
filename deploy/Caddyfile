@@ -1,0 +1,12 @@
+# Public entry point: HTTPS certificates from Let's Encrypt, renewed automatically.
+# Everything goes to the frontend, which forwards /api to the backend itself.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

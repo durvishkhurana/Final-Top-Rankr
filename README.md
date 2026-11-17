@@ -77,7 +77,8 @@ flowchart LR
 ```
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/JUDGE.md](docs/JUDGE.md),
-[docs/SECURITY.md](docs/SECURITY.md).
+[docs/SECURITY.md](docs/SECURITY.md). Running it on a server with HTTPS:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Quick start
 
@@ -138,13 +139,14 @@ All configuration is in `.env`; see [.env.example](.env.example).
 ## Project structure
 
 ```
-frontend/    Next.js app
+frontend/    Next.js app, browser tests (e2e/)
 backend/     API (api/), settings and security (core/), models and migrations (db/, alembic/),
              judge (judge/), tests (tests/)
 worker/      Queue worker
 sandbox/     Sandbox image and in-container harness
 problems/    Public problem catalogue
 scripts/     Setup, seed, reset, local judging, reference values
+deploy/      Reverse proxy (Caddy) for docker-compose.prod.yml
 docs/        Documentation
 ```
 
@@ -167,17 +169,25 @@ npx eslint . && npm run typecheck && npm test
 npm run dev
 ```
 
+Browser tests (Playwright) start a production build of the whole stack against the
+database in `DATABASE_URL`, so point it at a throwaway database. They need Postgres and
+Redis running, the sandbox image and a Chromium (`npx playwright install chromium`):
+
+```bash
+DATABASE_URL=postgresql+asyncpg://topranker:<password>@127.0.0.1:5432/topranker_e2e \
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=<any> sh scripts/e2e.sh
+```
+
+They cover signing up, email confirmation, password reset and the sign-in lock;
+submitting from the editor and following the judged runs; the leaderboard, the research
+comparison and downloads; the admin pages and AI challengers. Logs are written to
+`/tmp/topranker-e2e`.
+
 Judge a file from the command line, without the web app:
 
 ```bash
 python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 ```
-
-## Roadmap
-
-Not built yet:
-
-- Browser end-to-end tests, deployment guide
 
 ## License
 

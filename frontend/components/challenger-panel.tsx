@@ -19,7 +19,8 @@ export function ChallengerPanel({ problemId, dim }: { problemId: string; dim: nu
     queryKey: ["challenger", id],
     queryFn: () => api<ChallengerDetail>(`/challengers/${id}`),
     enabled: id !== undefined,
-    refetchInterval: (q) => (q.state.data?.running ? 5000 : false),
+    // also while the first generation is still queued
+    refetchInterval: (q) => (q.state.data?.running || q.state.data?.generations === 0 ? 5000 : false),
   });
   const c = detail.data;
   if (!c) return null;

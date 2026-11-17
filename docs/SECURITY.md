@@ -52,6 +52,7 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
 - Container escape through a kernel vulnerability. Containers share the host kernel.
   Setting `SANDBOX_RUNTIME=runsc` runs submissions under gVisor where it is installed;
   this path is supported by the runner but has not been tested in this project yet.
+  `DEPLOYMENT.md` lists the checks to run after enabling it.
 - The submission can find the protocol pipe inside its own process and write garbage
   to it. This only breaks its own run.
 - A submission can learn about an instance through the values it is given, which is
@@ -70,7 +71,7 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
   has passed or the password is reset. Unknown emails are counted the same way, so a
   lock does not reveal whether an account exists. The count is per email address, not
   per IP address: the API sits behind the frontend proxy and cannot trust client
-  addresses on its own. Limit attempts per IP at the reverse proxy (see
+  addresses on its own. Limit attempts per IP in front of the application (see
   `DEPLOYMENT.md`) to slow down guessing across many accounts.
 - Email confirmation and password reset use signed links (JWT) that expire after two
   days and one hour. Each link carries a fingerprint of the account's email and
