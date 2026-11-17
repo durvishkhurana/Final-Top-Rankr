@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from worker.main import finalise_contest, heldout_seeds
 
-from db.models import Contest, FRef, User
+from db.models import Contest, FinalResult, FRef, Run, User
 from judge import baselines
 
 from .test_api import RANDOM, judge_all, other_client, signup
@@ -108,9 +108,16 @@ async def test_contest_runs_then_final_ranking_uses_heldout_instances(
         final = (await ada.get(f"/api/contests/{cid}/leaderboard")).json()
         assert (await ada.get(f"/api/contests/{cid}")).json()["phase"] == "final"
         assert [b["name"] for b in final] == ["Bob", "Ada"] and all(b["final"] for b in final)
-        # different instances: the final score is close to, but not, the public one
-        assert final[0]["scores"]["STD-001@5"] != public_bob
+        # different instances: the final score is close to the public one, and the
+        # held-out runs are not the public runs (rounded scores can still tie)
         assert abs(final[0]["scores"]["STD-001@5"] - public_bob) < 150
+        held_out = await session.scalar(select(FinalResult).where(
+            FinalResult.contest_id == cid, FinalResult.problem_id == "STD-001",
+            FinalResult.user_id == board[0]["user_id"]))
+        assert held_out is not None
+        public_runs = await session.scalars(select(Run.aocc).where(
+            Run.submission_id == held_out.submission_id))
+        assert sorted(r["aocc"] for r in held_out.runs) != sorted(public_runs)
         # Ada is the only TR-001 entry, so she is scored against her own best there
         assert final[1]["scores"]["TR-001@5"] > 0
         # held-out reference values are not written to the public store

@@ -22,7 +22,7 @@ jobs:
     env:
       # throwaway values for the CI database only
       DATABASE_URL: postgresql+asyncpg://topranker:ci-only@localhost:5432/topranker
-      JWT_SECRET: ci-only-not-a-real-secret
+      JWT_SECRET: ci-only-not-a-real-secret-0123456789
     defaults:
       run:
         working-directory: backend
@@ -75,7 +75,7 @@ jobs:
       # throwaway values for the CI stack only
       DATABASE_URL: postgresql+asyncpg://topranker:ci-only@localhost:5432/topranker
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET: ci-only-not-a-real-secret
+      JWT_SECRET: ci-only-not-a-real-secret-0123456789
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: ci-only-admin
     steps:

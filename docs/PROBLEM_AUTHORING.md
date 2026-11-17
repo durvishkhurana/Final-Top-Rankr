@@ -1,7 +1,9 @@
 # Adding a problem
 
-This page covers built-in problems, which are code in the repository. Contributed and
-AI-built problems are not available yet.
+This page covers built-in problems, which are code in the repository. Users can also
+propose a function from the web app (`/contribute`), written by hand or drafted by the
+AI problem builder; it is smoke-tested in a sandbox and approved by an admin before it
+joins the catalogue as `C-NNN`. See [AI_FEATURES.md](AI_FEATURES.md#contributed-problems).
 
 ## A hidden function
 

@@ -12,6 +12,9 @@ problem instances, and ranks algorithms by server-side results.
 - The format follows the NeurIPS 2020 Black-Box Optimization Challenge, turned into a
   permanent platform for classrooms and research groups.
 
+New to the project? [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) explains all of it in
+plain English.
+
 ## What is built
 
 - **Judge.** 25 built-in problems: ten TopRanker originals and a standard set of eight

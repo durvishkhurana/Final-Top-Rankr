@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 
 from core import mail
-from core.config import get_settings
+from core.config import Settings, get_settings
 
 from .test_api import PASSWORD, RANDOM, other_client, signup
 
@@ -125,3 +125,12 @@ async def test_verified_email_can_be_required(
     assert r.status_code == 403 and "Confirm your email" in r.json()["detail"]
     await client.post("/api/auth/verify", json={"token": token(outbox[0], "verify-email")})
     assert (await client.post("/api/submissions", json=body)).status_code == 201
+
+
+def test_production_refuses_a_weak_secret() -> None:
+    for weak in ("change-me", "short", "change-me" + "x" * 40):
+        with pytest.raises(ValueError, match="JWT_SECRET"):
+            Settings(app_env="production", jwt_secret=weak, database_url="postgresql://x")
+    assert Settings(app_env="production", jwt_secret="k" * 32,
+                    database_url="postgresql://x").secure_cookies
+    Settings(app_env="development", jwt_secret="change-me", database_url="postgresql://x")

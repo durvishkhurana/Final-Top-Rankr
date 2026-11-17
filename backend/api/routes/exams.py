@@ -55,7 +55,7 @@ from ..schemas import (
     StartIn,
 )
 from .ai import guarded
-from .courses import teaching
+from .courses import teaches, teaching
 
 router = APIRouter(tags=["tests"])
 
@@ -63,10 +63,6 @@ POOL_SIZE = 20
 
 
 # --- helpers --------------------------------------------------------------------------
-
-
-def _teaches(course: Course, user: User) -> bool:
-    return user.role == "admin" or course.instructor_id == user.id
 
 
 async def _exam(session: AsyncSession, exam_id: int) -> tuple[Exam, Course]:
@@ -79,7 +75,7 @@ async def _exam(session: AsyncSession, exam_id: int) -> tuple[Exam, Course]:
 
 async def _own_exam(session: AsyncSession, exam_id: int, user: User) -> Exam:
     exam, course = await _exam(session, exam_id)
-    if not _teaches(course, user):
+    if not teaches(course, user):
         raise HTTPException(403, "Only the instructor can do this")
     return exam
 
@@ -94,7 +90,7 @@ async def _out(session: AsyncSession, exam: Exam, course: Course, user: User) ->
         id=exam.id, course_id=course.id, course_title=course.title, title=exam.title,
         description=exam.description, starts_at=exam.starts_at, ends_at=exam.ends_at,
         camera_checks=exam.camera_checks, status=exam.status, questions=count,
-        max_total=total, teaches=_teaches(course, user),
+        max_total=total, teaches=teaches(course, user),
         attempt=MyAttempt(id=mine.id, status=mine.status,
                           total=mine.total if exam.status == "closed" else None)
         if mine else None)
@@ -182,7 +178,7 @@ async def create_exam(body: ExamIn, user: CurrentUser, session: Session) -> Exam
 async def get_exam(exam_id: int, user: CurrentUser, session: Session) -> ExamOut:
     exam, course = await _exam(session, exam_id)
     member = await session.get(Enrollment, (course.id, user.id))
-    if not _teaches(course, user) and (member is None or exam.status == "draft"):
+    if not teaches(course, user) and (member is None or exam.status == "draft"):
         raise HTTPException(404, "Test not found")
     return await _out(session, exam, course, user)
 

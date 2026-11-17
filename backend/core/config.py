@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -58,6 +59,15 @@ class Settings(BaseSettings):
 
     admin_email: str = ""
     admin_password: str = ""
+
+    @model_validator(mode="after")
+    def _strong_secret(self) -> "Settings":
+        """Session tokens and held-out seeds depend on JWT_SECRET; refuse to start a
+        non-development server with the example value or a short one."""
+        if self.app_env != "development" and (
+                len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret):
+            raise ValueError("JWT_SECRET must be a random value of at least 32 characters")
+        return self
 
     @property
     def secure_cookies(self) -> bool:

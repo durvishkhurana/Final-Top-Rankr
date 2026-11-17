@@ -109,7 +109,8 @@ async def seed_demo(session: AsyncSession) -> str | None:
             continue
         # each student tries a few optimizers on a handful of problems, improving over time
         for problem_id in rng.sample(problem_ids, rng.randint(5, 9)):
-            dim = rng.choice([5, 5, 5, 10])
+            dims = PROBLEMS[problem_id].dims  # mostly the smallest, sometimes the next
+            dim = dims[1] if len(dims) > 1 and rng.random() < 0.25 else dims[0]
             picks = sorted(rng.sample(range(len(DEMO_OPTIMIZERS)), rng.randint(1, 3)))
             start = now - timedelta(days=rng.uniform(2, 29))
             for attempt, pick in enumerate(picks):

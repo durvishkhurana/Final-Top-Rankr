@@ -24,11 +24,15 @@ async def _out(session: AsyncSession, course: Course, user: User) -> CourseOut:
                      teaches=teaches, invite_code=course.invite_code if teaches else None)
 
 
+def teaches(course: Course, user: User) -> bool:
+    return user.role == "admin" or course.instructor_id == user.id
+
+
 async def teaching(session: AsyncSession, course_id: int, user: User) -> Course:
     course = await session.get(Course, course_id)
     if course is None:
         raise HTTPException(404, "Course not found")
-    if user.role != "admin" and course.instructor_id != user.id:
+    if not teaches(course, user):
         raise HTTPException(403, "Only the instructor can see this")
     return course
 
