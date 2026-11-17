@@ -22,11 +22,13 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def make_token(user_id: int, kind: str, ttl: timedelta) -> tuple[str, str, datetime]:
-    """Returns (token, jti, expiry). kind is 'access' or 'refresh'."""
+def make_token(user_id: int, kind: str, ttl: timedelta, **claims: str
+               ) -> tuple[str, str, datetime]:
+    """Returns (token, jti, expiry). kind is 'access', 'refresh', or the purpose of an
+    emailed link ('verify', 'reset')."""
     jti = uuid.uuid4().hex
     expires = datetime.now(UTC) + ttl
-    payload = {"sub": str(user_id), "kind": kind, "jti": jti, "exp": expires}
+    payload = {**claims, "sub": str(user_id), "kind": kind, "jti": jti, "exp": expires}
     return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256"), jti, expires
 
 

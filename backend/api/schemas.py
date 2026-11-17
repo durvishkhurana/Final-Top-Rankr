@@ -24,6 +24,18 @@ class LoginIn(BaseModel):
     password: str = Field(max_length=200)
 
 
+class EmailIn(BaseModel):
+    email: EmailStr
+
+
+class TokenIn(BaseModel):
+    token: str = Field(max_length=1000)
+
+
+class ResetIn(TokenIn):
+    password: str = Field(min_length=8, max_length=200)
+
+
 class ProfileIn(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     country: str | None = Field(default=None, max_length=80)
@@ -39,6 +51,7 @@ class Me(Model):
     country: str
     institution: str
     bio: str
+    email_verified: bool
 
 
 class ProfileSubmission(Model):

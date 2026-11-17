@@ -7,7 +7,7 @@ from db.models import Contest, Problem, Submission
 from db.results import ref_lookup
 from judge.scoring import checkpoints, precision
 
-from ..deps import CurrentUser, Enqueue, OptionalUser, Session
+from ..deps import CurrentUser, Enqueue, OptionalUser, Session, VerifiedUser
 from ..schemas import RunDetail, SubmissionDetail, SubmissionOut, SubmitIn
 from .contests import is_participant, phase
 from .problems import quota_for
@@ -20,7 +20,7 @@ def _out(sub: Submission) -> SubmissionOut:
 
 
 @router.post("", response_model=SubmissionOut, status_code=201)
-async def submit(body: SubmitIn, user: CurrentUser, session: Session, enqueue: Enqueue
+async def submit(body: SubmitIn, user: VerifiedUser, session: Session, enqueue: Enqueue
                  ) -> SubmissionOut:
     problem = await session.get(Problem, body.problem_id)
     if problem is None or not problem.is_active:

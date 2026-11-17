@@ -103,7 +103,7 @@ async def seed_demo(session: AsyncSession) -> str | None:
     for i, (name, role, country, institution) in enumerate(DEMO_PEOPLE):
         user = User(email=f"demo{i}@topranker.invalid" if i else "instructor@topranker.invalid",
                     name=name, role=role, country=country, institution=institution,
-                    password_hash=hashed, is_demo=True)
+                    password_hash=hashed, is_demo=True, email_verified=True)
         session.add(user)
         await session.commit()
         if role != "student":

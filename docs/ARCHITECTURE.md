@@ -91,6 +91,7 @@ erDiagram
         string institution
         bool is_bot "baseline entries"
         bool is_demo "seeded demo data"
+        bool email_verified
     }
     REFRESH_TOKENS {
         string jti PK
@@ -174,6 +175,10 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
 ## Accounts and sessions
 
 - Passwords are hashed with Argon2.
+- Failed sign-ins and emailed links are counted in `auth_events` (by email) for the
+  sign-in lock and the hourly email limit. See `SECURITY.md`.
+- Email confirmation and password-reset links are signed tokens sent by
+  `core/mail.py` (SMTP, or the backend log when no SMTP host is set).
 - Sign-in sets two httpOnly, SameSite=Lax cookies: a 15-minute access token and a
   7-day refresh token (both JWT). They are also marked Secure outside development.
 - A refresh token works once. Using it deletes its database row and issues a new pair,
@@ -232,7 +237,7 @@ Interactive documentation is served by the API at `/docs`.
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/signup`, `login`, `refresh`, `logout`; `GET /api/auth/me` |
+| Auth | `POST /api/auth/signup`, `login`, `refresh`, `logout`, `verify`, `verify/resend`, `password/forgot`, `password/reset`; `GET /api/auth/me` |
 | Users | `GET /api/users/{id}`, `PATCH /api/users/me` |
 | Problems | `GET /api/problems`, `/problems/{id}`, `/problems/{id}/leaderboard?dim=`, `/problems/{id}/quota`, `/templates` |
 | Submissions | `POST /api/submissions`, `GET /api/submissions`, `GET /api/submissions/{id}` |

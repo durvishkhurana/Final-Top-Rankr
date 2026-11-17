@@ -74,6 +74,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <p className="mt-4 text-sm text-muted-foreground">
           {mode === "login" ? (
             <>
+              <Link href="/forgot-password" className="text-foreground underline">
+                Forgot your password?
+              </Link>
+              <br />
               No account?{" "}
               <Link href="/signup" className="text-foreground underline">
                 Create one

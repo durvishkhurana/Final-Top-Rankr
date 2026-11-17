@@ -10,6 +10,7 @@ export interface Me {
   country: string;
   institution: string;
   bio: string;
+  email_verified: boolean;
 }
 
 export interface Problem {

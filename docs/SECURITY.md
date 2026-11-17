@@ -65,7 +65,22 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
   cookies (Secure outside development); refresh tokens are single-use.
 - State-changing requests from another origin are refused.
 - Code, logs and error messages of a submission are visible only to its author and admins.
-- Not yet in place: rate limiting of sign-in attempts, email verification, password reset.
+- Sign-in lock: after `LOGIN_MAX_FAILURES` wrong passwords for one email within
+  `LOGIN_WINDOW_MIN` minutes, sign-in to that account is refused (429) until the window
+  has passed or the password is reset. Unknown emails are counted the same way, so a
+  lock does not reveal whether an account exists. The count is per email address, not
+  per IP address: the API sits behind the frontend proxy and cannot trust client
+  addresses on its own. Limit attempts per IP at the reverse proxy (see
+  `DEPLOYMENT.md`) to slow down guessing across many accounts.
+- Email confirmation and password reset use signed links (JWT) that expire after two
+  days and one hour. Each link carries a fingerprint of the account's email and
+  password hash, so a reset link works once and every earlier link stops working when
+  the password changes. At most three links of each kind are sent per address per
+  hour. "Forgot password" answers the same way whether or not the account exists.
+- A password reset signs the account out on every device (all refresh tokens are
+  deleted). With `REQUIRE_VERIFIED_EMAIL=true`, submissions and contributions need a
+  confirmed email address.
+- A daily worker job deletes expired refresh tokens and account events older than a day.
 
 ## Operating notes
 

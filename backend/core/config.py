@@ -42,6 +42,20 @@ class Settings(BaseSettings):
     # Browser integrity signals of tests are deleted after this many days
     integrity_log_retention_days: int = 30
 
+    # Sign-in: failed attempts per account within the window before it is locked
+    login_max_failures: int = 5
+    login_window_min: int = 15
+    # Submissions and contributions need a confirmed email address
+    require_verified_email: bool = False
+
+    # Outgoing email. With no SMTP host the messages are written to the API log.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "TopRanker <no-reply@localhost>"
+    smtp_starttls: bool = True
+
     admin_email: str = ""
     admin_password: str = ""
 

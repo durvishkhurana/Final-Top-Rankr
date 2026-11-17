@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { VerifyBanner } from "@/components/account-forms";
 import { Nav } from "@/components/nav";
 import { Providers } from "@/components/providers";
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-full flex-col font-sans">
         <Providers>
           <Nav />
+          <VerifyBanner />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
           <footer className="border-t py-4 text-center text-xs text-muted-foreground">
             TopRanker — every submission is run on the server under identical conditions.

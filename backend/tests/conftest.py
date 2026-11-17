@@ -12,6 +12,7 @@ os.environ["FRONTEND_URL"] = "http://localhost:3000"
 # AI providers are faked in tests (ai.llm.TRANSPORT); never the real keys from .env
 os.environ["GROQ_API_KEY"] = "test-groq"
 os.environ["GEMINI_API_KEY"] = "test-gemini"
+os.environ["SMTP_HOST"] = ""  # emails are only logged
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

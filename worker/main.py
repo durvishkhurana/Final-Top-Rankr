@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from core.config import get_settings
 from db.base import sessionmaker
 from db.contributed import load_contributed
-from db.models import Contest, Contribution, FinalResult, Submission
+from db.models import AuthEvent, Contest, Contribution, FinalResult, RefreshToken, Submission
 from db.results import judge_refs, store_result
 from exams.grading import grade_attempt as grade
 from exams.grading import purge_events
@@ -138,16 +138,22 @@ async def grade_attempt(ctx: dict[str, Any], attempt_id: int) -> None:
         await grade(session, attempt_id)
 
 
-async def purge_integrity_events(ctx: dict[str, Any]) -> None:
+async def purge_old_rows(ctx: dict[str, Any]) -> None:
+    """Daily: integrity signals past their retention, expired sign-in sessions, and
+    account events older than any rate-limit window."""
     days = get_settings().integrity_log_retention_days
+    now = datetime.now(UTC)
     async with sessionmaker()() as session:
-        n = await purge_events(session, datetime.now(UTC) - timedelta(days=days))
+        n = await purge_events(session, now - timedelta(days=days))
+        await session.execute(delete(RefreshToken).where(RefreshToken.expires_at < now))
+        await session.execute(delete(AuthEvent).where(AuthEvent.at < now - timedelta(days=1)))
+        await session.commit()
     log.info("deleted %d integrity events older than %d days", n, days)
 
 
 class WorkerSettings:
     functions = [judge_submission, finalise_contest, smoke_contribution, grade_attempt]
-    cron_jobs = [cron(purge_integrity_events, hour={3}, minute={0})]
+    cron_jobs = [cron(purge_old_rows, hour={3}, minute={0})]
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 2  # each job already runs 4 sandbox containers in parallel
     job_timeout = 3600

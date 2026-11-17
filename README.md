@@ -20,7 +20,8 @@ problem instances, and ranks algorithms by server-side results.
   container; the objective function never enters it. Budget enforcement, convergence
   traces, AOCC scoring, and three baselines (random search, differential evolution,
   CMA-ES) judged like any submission.
-- **Web platform.** Accounts with student, instructor and admin roles; problem
+- **Web platform.** Accounts with student, instructor and admin roles, email
+  confirmation, password reset and a sign-in lock after repeated wrong passwords; problem
   catalogue; code submission with an in-browser editor and starter templates; live run
   status; per-submission convergence chart and run table; per-problem leaderboards with
   baselines; global leaderboards by person, country and institution; statistics page;
@@ -121,6 +122,9 @@ All configuration is in `.env`; see [.env.example](.env.example).
 | `SANDBOX_IMAGE`, `SANDBOX_RUNTIME`, `SANDBOX_CPU`, `SANDBOX_MEMORY_MB`, `SANDBOX_TIMEOUT_SEC` | Limits for each run |
 | `SUBMIT_COOLDOWN_SEC`, `SUBMIT_DAILY_CAP` | Submission rate limits, per user and problem |
 | `HELDOUT_SECRET` | Secret that determines the held-out contest instances (defaults to `JWT_SECRET`) |
+| `LOGIN_MAX_FAILURES`, `LOGIN_WINDOW_MIN` | Sign-in lock after repeated wrong passwords |
+| `REQUIRE_VERIFIED_EMAIL` | Submissions and contributions need a confirmed email |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS` | Outgoing email; without a host, emails go to the backend log |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First admin account, created by the seed script |
 
 ## Project structure

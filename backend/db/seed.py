@@ -54,7 +54,7 @@ async def ensure_admin(session: AsyncSession) -> User | None:
     user = await session.scalar(select(User).where(User.email == s.admin_email.lower()))
     if user is None:
         user = User(email=s.admin_email.lower(), name="Admin", role="admin",
-                    password_hash=hash_password(s.admin_password))
+                    password_hash=hash_password(s.admin_password), email_verified=True)
         session.add(user)
         await session.commit()
     return user
