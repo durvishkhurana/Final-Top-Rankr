@@ -191,6 +191,12 @@ class Problem:
     upper: float | None = None
     source: str | None = None
 
+    def optimum(self, dim: int) -> float | None:
+        """The exact optimum value at this dimension, when its location is known."""
+        if self.z_opt is None:
+            return None
+        return float(self.fn(np.full((1, dim), self.z_opt))[0])
+
 
 _TR = [
     ("TR-001", "Cascading Tide", tr001, 5.0),

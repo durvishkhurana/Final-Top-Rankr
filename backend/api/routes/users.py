@@ -37,7 +37,7 @@ async def profile(user_id: int, session: Session) -> Profile:
     user = await session.get(User, user_id)
     if user is None:
         raise HTTPException(404, "User not found")
-    rated = next((r for r in await user_ratings(session) if r.user.id == user_id), None)
+    rated = next(iter(await user_ratings(session, user_id)), None)
     total = await session.scalar(
         select(func.count()).select_from(Submission).where(Submission.user_id == user_id))
     recent = await session.scalars(

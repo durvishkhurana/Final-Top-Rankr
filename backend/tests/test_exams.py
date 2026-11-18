@@ -43,8 +43,10 @@ def rename(code: str) -> str:
 
 
 def test_numeric_answers_are_computed_and_personal() -> None:
-    assert numeric.FUNCTIONS["sphere"](np.array([1.0, 2.0])) == 5.0
-    assert numeric.FUNCTIONS["rastrigin"](np.zeros(3)) == 0.0
+    params, answer = numeric.instance("evaluate", 3)
+    x = np.array([params["point"]])
+    assert answer == numeric.FUNCTIONS[params["function"]](x)[0]
+    assert numeric.FUNCTIONS["rastrigin"](np.zeros((1, 3)))[0] == 0.0
     seeds = {numeric.personal_seed(1, student, 7) for student in range(50)}
     assert len(seeds) == 50
     assert numeric.instance("precision", 42) == numeric.instance("precision", 42)

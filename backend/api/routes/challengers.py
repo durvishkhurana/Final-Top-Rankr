@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai.challenger import champion, history, running
-from db.models import Challenger, Problem
+from ai.challenger import champion, histories, running
+from db.models import Challenger, Generation, Problem
 
 from ..deps import AdminUser, Enqueue, Session
 from ..schemas import ActiveIn, ChallengerDetail, ChallengerIn, ChallengerOut, GenerationOut
@@ -14,8 +14,17 @@ from ..schemas import ActiveIn, ChallengerDetail, ChallengerIn, ChallengerOut, G
 router = APIRouter(prefix="/challengers", tags=["challengers"])
 
 
+async def _outs(session: AsyncSession, challengers: list[Challenger], detail: bool = False
+                ) -> list[ChallengerDetail]:
+    gens = await histories(session, [c.id for c in challengers])
+    return [_build(c, gens[c.id], detail) for c in challengers]
+
+
 async def _out(session: AsyncSession, c: Challenger, detail: bool = False) -> ChallengerDetail:
-    gens = await history(session, c)
+    return (await _outs(session, [c], detail))[0]
+
+
+def _build(c: Challenger, gens: list[Generation], detail: bool) -> ChallengerDetail:
     best = champion(gens)
     return ChallengerDetail(
         id=c.id, problem_id=c.problem_id, dim=c.dim, active=c.active, generations=len(gens),
@@ -43,7 +52,7 @@ async def list_challengers(session: Session, problem_id: str | None = None,
         query = query.where(Challenger.problem_id == problem_id)
     if dim:
         query = query.where(Challenger.dim == dim)
-    return [await _out(session, c) for c in await session.scalars(query)]
+    return await _outs(session, list(await session.scalars(query)))
 
 
 @router.get("/{challenger_id}", response_model=ChallengerDetail)
@@ -82,7 +91,7 @@ async def set_active(challenger_id: int, body: ActiveIn, _: AdminUser, session: 
 async def evolve_now(challenger_id: int, _: AdminUser, session: Session, enqueue: Enqueue
                      ) -> ChallengerDetail:
     challenger = await _get(session, challenger_id)
-    if running(await history(session, challenger)):
+    if running((await histories(session, [challenger.id]))[challenger.id]):
         raise HTTPException(409, "A generation is already running")
     await enqueue("evolve_challenger", challenger.id)
     return await _out(session, challenger)

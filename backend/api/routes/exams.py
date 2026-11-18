@@ -2,11 +2,13 @@
 
 import asyncio
 import json
+from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -80,23 +82,36 @@ async def _own_exam(session: AsyncSession, exam_id: int, user: User) -> Exam:
     return exam
 
 
+async def _outs(session: AsyncSession, rows: list[tuple[Exam, Course]], user: User
+                ) -> list[ExamOut]:
+    """Tests as the viewer sees them, with two queries however many there are."""
+    ids = [exam.id for exam, _ in rows]
+    sizes = {exam_id: (n, total) for exam_id, n, total in await session.execute(
+        select(Question.exam_id, func.count(), func.sum(Question.points))
+        .where(Question.exam_id.in_(ids)).group_by(Question.exam_id))}
+    mine = {a.exam_id: a for a in await session.scalars(select(Attempt).where(
+        Attempt.exam_id.in_(ids), Attempt.user_id == user.id))}
+    out = []
+    for exam, course in rows:
+        count, total = sizes.get(exam.id, (0, 0.0))
+        attempt = mine.get(exam.id)
+        out.append(ExamOut(
+            id=exam.id, course_id=course.id, course_title=course.title, title=exam.title,
+            description=exam.description, starts_at=exam.starts_at, ends_at=exam.ends_at,
+            camera_checks=exam.camera_checks, status=exam.status, questions=count,
+            max_total=total, teaches=teaches(course, user),
+            attempt=MyAttempt(id=attempt.id, status=attempt.status,
+                              total=attempt.total if exam.status == "closed" else None)
+            if attempt else None))
+    return out
+
+
 async def _out(session: AsyncSession, exam: Exam, course: Course, user: User) -> ExamOut:
-    count, total = (await session.execute(
-        select(func.count(), func.coalesce(func.sum(Question.points), 0.0))
-        .where(Question.exam_id == exam.id))).one()
-    mine = await session.scalar(select(Attempt).where(Attempt.exam_id == exam.id,
-                                                      Attempt.user_id == user.id))
-    return ExamOut(
-        id=exam.id, course_id=course.id, course_title=course.title, title=exam.title,
-        description=exam.description, starts_at=exam.starts_at, ends_at=exam.ends_at,
-        camera_checks=exam.camera_checks, status=exam.status, questions=count,
-        max_total=total, teaches=teaches(course, user),
-        attempt=MyAttempt(id=mine.id, status=mine.status,
-                          total=mine.total if exam.status == "closed" else None)
-        if mine else None)
+    return (await _outs(session, [(exam, course)], user))[0]
 
 
-def _check_question(body: QuestionIn) -> dict[str, Any]:
+async def _question_data(session: AsyncSession, body: QuestionIn) -> dict[str, Any]:
+    """The validated data of a question; raises 422 for anything the test cannot use."""
     d = body.data
     if body.kind == "mcq":
         choices = [str(c).strip() for c in d.get("choices", []) if str(c).strip()]
@@ -113,7 +128,10 @@ def _check_question(body: QuestionIn) -> dict[str, Any]:
         raise HTTPException(422, "A reasoning question needs a rubric")
     if numeric.fill(body.prompt, dict.fromkeys(FACTS, "")) is None:
         raise HTTPException(422, f"The question may use only these placeholders: {FACTS}")
-    return {"problem_id": str(d.get("problem_id", "")), "dim": int(d.get("dim", 0)),
+    problem = await session.get(Problem, str(d.get("problem_id", "")))
+    if problem is None or int(d.get("dim", 0)) not in problem.dims:
+        raise HTTPException(422, "Choose a problem and dimension the students submitted to")
+    return {"problem_id": problem.id, "dim": int(d["dim"]),
             "rubric": str(d["rubric"]).strip(), "follow_up": bool(d.get("follow_up", True)),
             "pool": [p for p in d.get("pool", []) if isinstance(p, str)]}
 
@@ -132,11 +150,6 @@ async def _draft_question(session: AsyncSession, exam_id: int, question_id: int,
     if exam.status != "draft":
         raise HTTPException(409, "Questions can only be changed while the test is a draft")
     return question
-
-
-def _expected(exam_id: int, user_id: int, q: Question) -> tuple[dict[str, Any], float]:
-    return numeric.instance(q.data["generator"],
-                            numeric.personal_seed(exam_id, user_id, q.id))
 
 
 # --- instructor: building ---------------------------------------------------------------
@@ -159,7 +172,7 @@ async def list_exams(user: CurrentUser, session: Session) -> list[ExamOut]:
         .where((Course.instructor_id == user.id)
                | (Course.id.in_(enrolled) & (Exam.status != "draft")))
         .order_by(Exam.starts_at.desc()))
-    return [await _out(session, e, c, user) for e, c in rows]
+    return await _outs(session, [(e, c) for e, c in rows], user)
 
 
 @router.post("/tests", response_model=ExamOut, status_code=201)
@@ -238,11 +251,7 @@ async def add_question(exam_id: int, body: QuestionIn, user: CurrentUser,
     exam = await _own_exam(session, exam_id, user)
     if exam.status != "draft":
         raise HTTPException(409, "Questions can only be changed while the test is a draft")
-    data = _check_question(body)
-    if body.kind == "reasoning":
-        problem = await session.get(Problem, data["problem_id"])
-        if problem is None or data["dim"] not in problem.dims:
-            raise HTTPException(422, "Choose a problem and dimension the students submitted to")
+    data = await _question_data(session, body)
     position = (await session.scalar(select(func.max(Question.position))
                                      .where(Question.exam_id == exam_id)) or 0) + 1
     question = Question(exam_id=exam_id, position=position, kind=body.kind,
@@ -259,11 +268,8 @@ async def edit_question(exam_id: int, question_id: int, body: QuestionIn, user: 
     question = await _draft_question(session, exam_id, question_id, user)
     if body.kind != question.kind:
         raise HTTPException(422, "The kind of a question cannot change")
-    data = _check_question(body)
+    data = await _question_data(session, body)
     if body.kind == "reasoning":
-        problem = await session.get(Problem, data["problem_id"])
-        if problem is None or data["dim"] not in problem.dims:
-            raise HTTPException(422, "Choose a problem and dimension the students submitted to")
         data["pool"] = question.data.get("pool", [])
         question.pool_approved = False
     question.prompt, question.points, question.data = body.prompt.strip(), body.points, data
@@ -369,7 +375,7 @@ async def start(exam_id: int, body: StartIn, user: CurrentUser, session: Session
             prompt, sub_id = q.prompt, None
             flags: list[str] = []
             if q.kind == "numeric":
-                params, _ = _expected(exam_id, user.id, q)
+                params, _ = numeric.expected(q.data["generator"], exam_id, user.id, q.id)
                 prompt = numeric.fill(q.prompt, params) or q.prompt
             elif q.kind == "reasoning":
                 prompt, sub_id, flags = await _reasoning_prompt(session, exam, user.id, q)
@@ -490,44 +496,58 @@ async def submit(attempt_id: int, user: CurrentUser, session: Session, enqueue: 
 # --- instructor: review -------------------------------------------------------------------
 
 
+async def _answer_results(session: AsyncSession, questions: dict[int, Question],
+                          answers: list[Answer], owners: dict[int, int]
+                          ) -> dict[int, list[AnswerResult]]:
+    """Review rows per attempt, in question order, each with its grade history.
+    owners maps attempt id -> student id (numeric answers are personal)."""
+    history: dict[int, list[GradeEventOut]] = defaultdict(list)
+    for e, name in await session.execute(
+            select(GradeEvent, User.name).outerjoin(User, User.id == GradeEvent.actor_id)
+            .where(GradeEvent.answer_id.in_([a.id for a in answers])).order_by(GradeEvent.id)):
+        history[e.answer_id].append(GradeEventOut(
+            actor=name or "automatic", old_score=e.old_score, new_score=e.new_score,
+            reason=e.reason, created_at=e.created_at))
+    out: dict[int, list[AnswerResult]] = defaultdict(list)
+    for a in sorted(answers, key=lambda a: questions[a.question_id].position):
+        q = questions[a.question_id]
+        correct = None
+        if q.kind == "mcq":
+            correct = q.data["choices"][q.data["correct"]]
+        elif q.kind == "numeric":
+            _, value = numeric.expected(q.data["generator"], q.exam_id, owners[a.attempt_id],
+                                        q.id)
+            correct = f"{value:.6g}"
+        out[a.attempt_id].append(AnswerResult(
+            id=a.id, question_id=q.id, kind=q.kind, prompt=a.prompt, response=a.response,
+            follow_up=a.follow_up, follow_up_response=a.follow_up_response, correct=correct,
+            score=a.score, max_score=a.max_score, rationale=a.rationale,
+            confidence=a.confidence, graded_by=a.graded_by, flags=a.flags, time_ms=a.time_ms,
+            paste_chars=a.paste_chars, submission_id=a.submission_id, history=history[a.id]))
+    return out
+
+
 @router.get("/tests/{exam_id}/results", response_model=list[AttemptResult])
 async def results(exam_id: int, user: CurrentUser, session: Session) -> list[AttemptResult]:
     await _own_exam(session, exam_id, user)
-    out = []
     questions = {q.id: q for q in await session.scalars(
         select(Question).where(Question.exam_id == exam_id))}
-    for attempt in await session.scalars(select(Attempt).where(Attempt.exam_id == exam_id)
-                                         .order_by(Attempt.id)):
-        answers = []
-        for a in await session.scalars(select(Answer).where(Answer.attempt_id == attempt.id)):
-            q = questions[a.question_id]
-            correct = None
-            if q.kind == "mcq":
-                correct = q.data["choices"][q.data["correct"]]
-            elif q.kind == "numeric":
-                correct = f"{_expected(exam_id, attempt.user_id, q)[1]:.6g}"
-            history = await session.execute(
-                select(GradeEvent, User.name).outerjoin(User, User.id == GradeEvent.actor_id)
-                .where(GradeEvent.answer_id == a.id).order_by(GradeEvent.id))
-            answers.append(AnswerResult(
-                id=a.id, question_id=q.id, kind=q.kind, prompt=a.prompt, response=a.response,
-                follow_up=a.follow_up, follow_up_response=a.follow_up_response,
-                correct=correct, score=a.score, max_score=a.max_score, rationale=a.rationale,
-                confidence=a.confidence, graded_by=a.graded_by, flags=a.flags,
-                time_ms=a.time_ms, paste_chars=a.paste_chars, submission_id=a.submission_id,
-                history=[GradeEventOut(actor=name or "automatic", old_score=e.old_score,
-                                       new_score=e.new_score, reason=e.reason,
-                                       created_at=e.created_at)
-                         for e, name in history]))
-        answers.sort(key=lambda r: questions[r.question_id].position)
-        events = await session.scalars(select(IntegrityEvent).where(
-            IntegrityEvent.attempt_id == attempt.id).order_by(IntegrityEvent.at))
-        out.append(AttemptResult(
-            id=attempt.id, user_id=attempt.user_id, name=attempt.user.name,
-            status=attempt.status, camera_consent=attempt.camera_consent, total=attempt.total,
-            started_at=attempt.started_at, submitted_at=attempt.submitted_at, viva=attempt.viva,
-            answers=answers, events=[EventOut.model_validate(e) for e in events]))
-    return out
+    attempts = list(await session.scalars(
+        select(Attempt).where(Attempt.exam_id == exam_id).order_by(Attempt.id)))
+    ids = [a.id for a in attempts]
+    answers = await _answer_results(
+        session, questions,
+        list(await session.scalars(select(Answer).where(Answer.attempt_id.in_(ids)))),
+        {a.id: a.user_id for a in attempts})
+    events: dict[int, list[EventOut]] = defaultdict(list)
+    for e in await session.scalars(select(IntegrityEvent).where(
+            IntegrityEvent.attempt_id.in_(ids)).order_by(IntegrityEvent.at)):
+        events[e.attempt_id].append(EventOut.model_validate(e))
+    return [AttemptResult(
+        id=a.id, user_id=a.user_id, name=a.user.name, status=a.status,
+        camera_consent=a.camera_consent, total=a.total, started_at=a.started_at,
+        submitted_at=a.submitted_at, viva=a.viva, answers=answers[a.id], events=events[a.id])
+        for a in attempts]
 
 
 async def _instructor_answer(session: AsyncSession, answer_id: int, user: User
@@ -552,8 +572,11 @@ async def override(answer_id: int, body: GradeIn, user: CurrentUser, session: Se
     answer.score, answer.graded_by = body.score, "instructor"
     await set_total(session, attempt)
     await session.commit()
-    rows = [r for r in await results(attempt.exam_id, user, session) if r.id == attempt.id]
-    return next(a for a in rows[0].answers if a.id == answer.id)
+    question = await session.get(Question, answer.question_id)
+    assert question is not None
+    rows = await _answer_results(session, {question.id: question}, [answer],
+                                 {attempt.id: attempt.user_id})
+    return rows[attempt.id][0]
 
 
 async def _student_code(session: AsyncSession, attempt: Attempt) -> Submission | None:
@@ -597,14 +620,13 @@ async def _course_submissions(session: AsyncSession, course_id: int, problem_id:
                               dim: int) -> dict[int, Submission]:
     """Latest judged submission of each enrolled student on the problem."""
     students = select(Enrollment.user_id).where(Enrollment.course_id == course_id)
-    latest: dict[int, Submission] = {}
-    for sub in await session.scalars(
-            select(Submission).where(Submission.user_id.in_(students),
-                                     Submission.problem_id == problem_id, Submission.dim == dim,
-                                     Submission.status == "done")
-            .order_by(Submission.created_at)):
-        latest[sub.user_id] = sub
-    return {s.id: s for s in latest.values()}
+    latest = await session.scalars(
+        select(Submission).where(Submission.user_id.in_(students),
+                                 Submission.problem_id == problem_id, Submission.dim == dim,
+                                 Submission.status == "done")
+        .ext(distinct_on(Submission.user_id))
+        .order_by(Submission.user_id, Submission.created_at.desc()))
+    return {s.id: s for s in latest.unique()}
 
 
 @router.get("/courses/{course_id}/similarity", response_model=list[SimilarPair])

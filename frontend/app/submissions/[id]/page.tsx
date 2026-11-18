@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api";
 import { fmtDate, fmtPrecision, fmtScore } from "@/lib/format";
 import type { Curves, Problem, ProblemView, SubmissionDetail } from "@/lib/types";
+import { selectClass } from "@/lib/utils";
 
 export default function SubmissionPage() {
   const { id } = useParams<{ id: string }>();
@@ -120,7 +121,7 @@ export default function SubmissionPage() {
                 <label htmlFor="run">Run</label>
                 <select
                   id="run"
-                  className="h-8 rounded-lg border bg-background px-2 text-sm"
+                  className={selectClass}
                   value={`${run.instance_seed}-${run.seed}`}
                   onChange={(e) => setPicked(e.target.value)}
                 >

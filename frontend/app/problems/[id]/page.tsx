@@ -18,8 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import type { Problem, ProblemView, Quota, Submission, Template } from "@/lib/types";
-
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
+import { selectClass } from "@/lib/utils";
 
 export default function ProblemPage() {
   const { id } = useParams<{ id: string }>();

@@ -12,7 +12,7 @@ test("an admin starts an AI challenger and follows its generations", async ({ pa
   await expect(page).toHaveURL(/\/problems$/);
   await page.goto("/admin");
   await page.getByRole("tab", { name: "AI challengers" }).click();
-  await page.getByLabel("Start a challenger on").selectOption("STD-002");
+  await page.getByLabel("Problem", { exact: true }).selectOption("STD-002");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   const row = page.getByRole("row").filter({ hasText: "STD-002" });
   await expect(row).toBeVisible();

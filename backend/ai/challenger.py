@@ -57,10 +57,15 @@ def _line(g: Generation) -> str:
     return f"{g.number}: {'failed' if score is None else f'{score:.0f}'} - {g.approach or g.error}"
 
 
-async def history(session: AsyncSession, challenger: Challenger) -> list[Generation]:
-    return list((await session.scalars(
-        select(Generation).where(Generation.challenger_id == challenger.id)
-        .order_by(Generation.number))).unique())
+async def histories(session: AsyncSession, challenger_ids: list[int]
+                    ) -> dict[int, list[Generation]]:
+    """Every generation of each challenger, oldest first, in one query."""
+    out: dict[int, list[Generation]] = {i: [] for i in challenger_ids}
+    for g in (await session.scalars(
+            select(Generation).where(Generation.challenger_id.in_(challenger_ids))
+            .order_by(Generation.number))).unique():
+        out[g.challenger_id].append(g)
+    return out
 
 
 async def _next_prompt(session: AsyncSession, challenger: Challenger, problem: Problem,
@@ -88,7 +93,7 @@ async def evolve(session: AsyncSession, challenger_id: int,
     challenger = await session.get(Challenger, challenger_id)
     if challenger is None or not (problem := await session.get(Problem, challenger.problem_id)):
         return None
-    gens = await history(session, challenger)
+    gens = (await histories(session, [challenger.id]))[challenger.id]
     if running(gens):
         return None
     best = champion(gens)

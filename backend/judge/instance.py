@@ -48,8 +48,5 @@ def make_instance(problem: Problem, dim: int, instance_seed: int) -> Any:
     x_star = rng.uniform(-1.0, 1.0, dim) * problem.shift_frac * problem.bound
     Q, R = np.linalg.qr(rng.standard_normal((dim, dim)))
     Q = Q * np.sign(np.diag(R))  # sign fix makes Q uniformly distributed
-    f_opt = None
-    if problem.z_opt is not None:
-        f_opt = float(problem.fn(np.full((1, dim), problem.z_opt))[0])
     bound = np.full(dim, problem.bound)
-    return Instance(problem, dim, -bound, bound, x_star, Q, f_opt)
+    return Instance(problem, dim, -bound, bound, x_star, Q, problem.optimum(dim))

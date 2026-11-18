@@ -376,7 +376,7 @@ export interface SimilarPair {
   similarity: number;
 }
 
-export interface ComparedEntry {
+interface ComparedEntry {
   submission_id: number;
   label: string;
   is_baseline: boolean;
@@ -390,7 +390,7 @@ export interface ComparedEntry {
   ecdf: number[];
 }
 
-export interface PairTest {
+interface PairTest {
   a: number;
   b: number;
   p: number;

@@ -4,7 +4,6 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-import numpy as np
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,9 +29,8 @@ async def load_f_ref(session: AsyncSession, problem_id: str, dim: int) -> dict[i
 async def ref_lookup(session: AsyncSession, problem_id: str, dim: int
                      ) -> Callable[[int], float | None]:
     """Reference value by instance seed, for turning stored traces into precisions."""
-    problem = PROBLEMS[problem_id]
-    if problem.z_opt is not None:
-        f_opt = float(problem.fn(np.full((1, dim), problem.z_opt))[0])
+    f_opt = PROBLEMS[problem_id].optimum(dim)
+    if f_opt is not None:
         return lambda seed: f_opt
     return (await load_f_ref(session, problem_id, dim)).get
 

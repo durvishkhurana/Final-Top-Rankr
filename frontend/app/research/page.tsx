@@ -7,15 +7,15 @@ import { Suspense, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { Downloads } from "@/components/downloads";
+import { ProblemPicker, useProblems } from "@/components/problem-picker";
 import { PALETTE } from "@/components/solution-view";
 import { Empty, ErrorNote, Loading, PageTitle } from "@/components/state";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { evalTicks, fmtScore } from "@/lib/format";
-import type { BoardRow, Comparison, Problem } from "@/lib/types";
+import type { BoardRow, Comparison } from "@/lib/types";
 
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 const MAX = 8;
 
 const fmtP = (p: number) => (p < 0.001 ? "< 0.001" : p.toFixed(3));
@@ -177,7 +177,7 @@ function Research() {
   const search = useSearchParams();
   const router = useRouter();
   const problemId = search.get("problem") ?? "";
-  const problems = useQuery({ queryKey: ["problems"], queryFn: () => api<Problem[]>("/problems") });
+  const problems = useProblems();
   const problem = problems.data?.find((p) => p.id === problemId);
   const dim = Number(search.get("dim")) || problem?.dims[0];
 
@@ -198,10 +198,10 @@ function Research() {
     enabled: compared.length >= 2,
   });
 
-  const go = (p: string, d?: number) => {
+  const go = (p: string, d: number) => {
     setPicked(undefined);
     setCompared([]);
-    router.replace(`/research?problem=${p}${d ? `&dim=${d}` : ""}`);
+    router.replace(`/research?problem=${p}&dim=${d}`);
   };
   const toggle = (id: number) =>
     setPicked(chosen.includes(id) ? chosen.filter((i) => i !== id) : [...chosen, id].slice(0, MAX));
@@ -213,27 +213,7 @@ function Research() {
         analysis. All entries were run on the same instances and seeds, so their runs are directly comparable.
       </PageTitle>
       <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
-        <label htmlFor="problem">Problem</label>
-        <select id="problem" className={selectClass} value={problemId} onChange={(e) => go(e.target.value)}>
-          <option value="" disabled>
-            choose…
-          </option>
-          {problems.data?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id} {p.name}
-            </option>
-          ))}
-        </select>
-        {problem && (
-          <>
-            <label htmlFor="dim">Dimension</label>
-            <select id="dim" className={selectClass} value={dim} onChange={(e) => go(problemId, Number(e.target.value))}>
-              {problem.dims.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-          </>
-        )}
+        <ProblemPicker problems={problems.data ?? []} problemId={problemId} dim={dim} onChange={go} />
       </div>
 
       {problems.error && <ErrorNote error={problems.error} />}

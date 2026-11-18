@@ -208,14 +208,6 @@ def _zero(X: Array) -> Array:  # real-world problems have no base function
     return np.zeros(len(X))
 
 
-PROBLEMS.update({
-    "RW-001": Problem("RW-001", "Exam timetabling", _zero, 1.0, dims=(10, 20, 30),
-                      kind="timetable", factory=timetable),
-    "RW-002": Problem("RW-002", "Bus-stop location", _zero, 1.0, dims=(6, 10, 20),
-                      kind="facility", factory=facility),
-})
-
-
 def routing(problem: Problem, dim: int, seed: int) -> Routing:
     rng = np.random.default_rng([seed, dim, 303])
     demands = rng.integers(1, 10, dim).astype(float)
@@ -223,5 +215,11 @@ def routing(problem: Problem, dim: int, seed: int) -> Routing:
                    np.array([MAP / 2, MAP / 2]), capacity=float(np.ceil(demands.sum() / 4) + 4))
 
 
-PROBLEMS["RW-003"] = Problem("RW-003", "Delivery routing", _zero, 1.0, dims=(10, 20, 30),
-                             kind="routing", factory=routing)
+PROBLEMS.update({
+    "RW-001": Problem("RW-001", "Exam timetabling", _zero, 1.0, dims=(10, 20, 30),
+                      kind="timetable", factory=timetable),
+    "RW-002": Problem("RW-002", "Bus-stop location", _zero, 1.0, dims=(6, 10, 20),
+                      kind="facility", factory=facility),
+    "RW-003": Problem("RW-003", "Delivery routing", _zero, 1.0, dims=(10, 20, 30),
+                      kind="routing", factory=routing),
+})

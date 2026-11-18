@@ -12,12 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, patch, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
+import { selectClass } from "@/lib/utils";
 import { CodeEditor } from "@/components/code-editor";
+import { ProblemPicker, useProblems } from "@/components/problem-picker";
 import { STATUS_TEXT, SmokeChecks } from "@/components/smoke-checks";
 import { fmtScore } from "@/lib/format";
 import type { AdminUser, Challenger, Contribution, Problem, Role, Submission } from "@/lib/types";
 
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 
 function Users({ myId }: { myId: number }) {
   const queryClient = useQueryClient();
@@ -227,13 +228,11 @@ function Contributions() {
 function Challengers() {
   const queryClient = useQueryClient();
   const list = useQuery({ queryKey: ["challengers"], queryFn: () => api<Challenger[]>("/challengers") });
-  const problems = useQuery({ queryKey: ["admin-problems"], queryFn: () => api<Problem[]>("/admin/problems") });
-  const [problemId, setProblemId] = useState("");
-  const problem = problems.data?.find((p) => p.id === problemId);
-  const [dim, setDim] = useState<number>();
+  const problems = useProblems();
+  const [[problemId, dim], setPick] = useState<[string, number?]>([""]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["challengers"] });
   const start = useMutation({
-    mutationFn: () => post("/challengers", { problem_id: problemId, dim: dim ?? problem?.dims[0] }),
+    mutationFn: () => post("/challengers", { problem_id: problemId, dim }),
     onSettled: refresh,
   });
   const evolve = useMutation({ mutationFn: (id: number) => post(`/challengers/${id}/evolve`), onSettled: refresh });
@@ -251,38 +250,14 @@ function Challengers() {
         once a day; each generation is one AI request and counts against the daily limits.
       </p>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label htmlFor="ch-problem">Start a challenger on</label>
-        <select
-          id="ch-problem"
-          className={selectClass}
-          value={problemId}
-          onChange={(e) => {
-            setProblemId(e.target.value);
-            setDim(undefined);
-          }}
-        >
-          <option value="" disabled>
-            problem…
-          </option>
-          {problems.data?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id} {p.name}
-            </option>
-          ))}
-        </select>
-        {problem && (
-          <select
-            aria-label="Dimension"
-            className={selectClass}
-            value={dim ?? problem.dims[0]}
-            onChange={(e) => setDim(Number(e.target.value))}
-          >
-            {problem.dims.map((d) => (
-              <option key={d}>{d}</option>
-            ))}
-          </select>
-        )}
-        <Button size="sm" disabled={!problem || start.isPending} onClick={() => start.mutate()}>
+        <span className="font-medium">Start a challenger:</span>
+        <ProblemPicker
+          problems={problems.data ?? []}
+          problemId={problemId}
+          dim={dim}
+          onChange={(p, d) => setPick([p, d])}
+        />
+        <Button size="sm" disabled={!problemId || start.isPending} onClick={() => start.mutate()}>
           Start
         </Button>
       </div>

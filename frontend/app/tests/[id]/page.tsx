@@ -11,13 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api, post } from "@/lib/api";
+import { api, post, put } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import type { AnswerView, AttemptView, Exam } from "@/lib/types";
-
-function put<T>(path: string, body: unknown) {
-  return api<T>(path, { method: "PUT", body: JSON.stringify(body) });
-}
 
 function Consent({ exam, onStart }: { exam: Exam; onStart: () => void }) {
   const [camera, setCamera] = useState(false);
