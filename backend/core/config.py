@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,8 +43,31 @@ class Settings(BaseSettings):
     # Browser integrity signals of tests are deleted after this many days
     integrity_log_retention_days: int = 30
 
+    # Sign-in: failed attempts per account within the window before it is locked
+    login_max_failures: int = 5
+    login_window_min: int = 15
+    # Submissions and contributions need a confirmed email address
+    require_verified_email: bool = False
+
+    # Outgoing email. With no SMTP host the messages are written to the API log.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "TopRanker <no-reply@localhost>"
+    smtp_starttls: bool = True
+
     admin_email: str = ""
     admin_password: str = ""
+
+    @model_validator(mode="after")
+    def _strong_secret(self) -> "Settings":
+        """Session tokens and held-out seeds depend on JWT_SECRET; refuse to start a
+        non-development server with the example value or a short one."""
+        if self.app_env != "development" and (
+                len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret):
+            raise ValueError("JWT_SECRET must be a random value of at least 32 characters")
+        return self
 
     @property
     def secure_cookies(self) -> bool:

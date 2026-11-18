@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 
 import { ErrorNote, Loading, PageTitle } from "@/components/state";
@@ -11,11 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, patch, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
+import { selectClass } from "@/lib/utils";
 import { CodeEditor } from "@/components/code-editor";
+import { ProblemPicker, useProblems } from "@/components/problem-picker";
 import { STATUS_TEXT, SmokeChecks } from "@/components/smoke-checks";
-import type { AdminUser, Contribution, Problem, Role, Submission } from "@/lib/types";
+import { fmtScore } from "@/lib/format";
+import type { AdminUser, Challenger, Contribution, Problem, Role, Submission } from "@/lib/types";
 
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 
 function Users({ myId }: { myId: number }) {
   const queryClient = useQueryClient();
@@ -222,6 +225,83 @@ function Contributions() {
   );
 }
 
+function Challengers() {
+  const queryClient = useQueryClient();
+  const list = useQuery({ queryKey: ["challengers"], queryFn: () => api<Challenger[]>("/challengers") });
+  const problems = useProblems();
+  const [[problemId, dim], setPick] = useState<[string, number?]>([""]);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["challengers"] });
+  const start = useMutation({
+    mutationFn: () => post("/challengers", { problem_id: problemId, dim }),
+    onSettled: refresh,
+  });
+  const evolve = useMutation({ mutationFn: (id: number) => post(`/challengers/${id}/evolve`), onSettled: refresh });
+  const toggle = useMutation({
+    mutationFn: (c: Challenger) => patch(`/challengers/${c.id}`, { is_active: !c.active }),
+    onSettled: refresh,
+  });
+  if (list.isPending) return <Loading />;
+  if (list.error) return <ErrorNote error={list.error} />;
+  const error = start.error ?? evolve.error ?? toggle.error;
+  return (
+    <div className="space-y-4">
+      <p className="max-w-3xl text-sm text-muted-foreground">
+        A challenger writes a new generation of its optimizer, judges it and keeps the best. Active challengers evolve
+        once a day; each generation is one AI request and counts against the daily limits.
+      </p>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">Start a challenger:</span>
+        <ProblemPicker
+          problems={problems.data ?? []}
+          problemId={problemId}
+          dim={dim}
+          onChange={(p, d) => setPick([p, d])}
+        />
+        <Button size="sm" disabled={!problemId || start.isPending} onClick={() => start.mutate()}>
+          Start
+        </Button>
+      </div>
+      {error && <ErrorNote error={error} />}
+      {list.data.length > 0 && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Problem</TableHead>
+              <TableHead className="text-right">Generations</TableHead>
+              <TableHead className="text-right">Best score</TableHead>
+              <TableHead>Daily</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.data.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell>
+                  <Link href={`/problems/${c.problem_id}?dim=${c.dim}`} className="hover:underline">
+                    <span className="font-mono">{c.problem_id}</span> at dimension {c.dim}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{c.generations}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtScore(c.best_score)}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" onClick={() => toggle.mutate(c)}>
+                    {c.active ? "Pause" : "Resume"}
+                  </Button>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button size="sm" disabled={c.running || evolve.isPending} onClick={() => evolve.mutate(c.id)}>
+                    {c.running ? "Running…" : "Evolve now"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
+}
+
 function Recent() {
   const subs = useQuery({
     queryKey: ["admin-submissions"],
@@ -244,6 +324,7 @@ export default function AdminPage() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="problems">Problems</TabsTrigger>
           <TabsTrigger value="contributions">Contributions</TabsTrigger>
+          <TabsTrigger value="challengers">AI challengers</TabsTrigger>
           <TabsTrigger value="submissions">Recent submissions</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="pt-3">
@@ -254,6 +335,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="contributions" className="pt-3">
           <Contributions />
+        </TabsContent>
+        <TabsContent value="challengers" className="pt-3">
+          <Challengers />
         </TabsContent>
         <TabsContent value="submissions" className="pt-3">
           <Recent />

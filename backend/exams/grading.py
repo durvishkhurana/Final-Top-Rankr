@@ -73,8 +73,8 @@ async def grade_attempt(session: AsyncSession, attempt_id: int) -> None:
             _record(session, answer, answer.max_score if right else 0.0, "code",
                     "graded by code")
         elif q.kind == "numeric":
-            _, expected = numeric.instance(
-                q.data["generator"], numeric.personal_seed(attempt.exam_id, attempt.user_id, q.id))
+            _, expected = numeric.expected(q.data["generator"], attempt.exam_id,
+                                           attempt.user_id, q.id)
             try:
                 right = numeric.is_correct(float(answer.response), expected,
                                            q.data.get("rel_tol", 1e-3))

@@ -1,22 +1,17 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
+import { useProblems } from "@/components/problem-picker";
 import { Empty, ErrorNote, Loading, PageTitle } from "@/components/state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import type { Problem } from "@/lib/types";
 
 const LEVELS = ["All", "Easy", "Medium", "Hard"];
 
 export default function ProblemsPage() {
-  const { data, error, isPending } = useQuery({
-    queryKey: ["problems"],
-    queryFn: () => api<Problem[]>("/problems"),
-  });
+  const { data, error, isPending } = useProblems();
   const [level, setLevel] = useState("All");
   const shown = data?.filter((p) => level === "All" || p.level === level) ?? [];
   const categories = [...new Set(shown.map((p) => p.category))];

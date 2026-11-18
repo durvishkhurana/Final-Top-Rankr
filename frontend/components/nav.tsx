@@ -14,6 +14,7 @@ const LINKS = [
   ["/contests", "Contests"],
   ["/leaderboard", "Leaderboard"],
   ["/statistics", "Statistics"],
+  ["/research", "Research"],
 ] as const;
 
 export function Nav() {

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { PALETTE } from "@/components/solution-view";
+import { evalTicks } from "@/lib/format";
 import type { Curve, Run } from "@/lib/types";
 
 function quantile(sorted: number[], q: number): number {
@@ -57,9 +58,7 @@ export function ConvergenceChart({
     return <p className="py-6 text-sm text-muted-foreground">No successful runs to plot.</p>;
   }
 
-  // powers of ten up to the budget, plus the budget itself
-  const last = data[data.length - 1].evals;
-  const ticks = [1, 10, 100, 1000, 10000, 100000].filter((t) => t < last * 0.6).concat(last);
+  const ticks = evalTicks(data[data.length - 1].evals);
 
   return (
     <figure>

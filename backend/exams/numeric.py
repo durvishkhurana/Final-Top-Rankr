@@ -10,39 +10,24 @@ from typing import Any
 
 import numpy as np
 
+from judge.functions import Fn, ackley, rastrigin, rosenbrock, sphere
+
 
 def personal_seed(test_id: int, student_id: int, question_id: int) -> int:
     digest = hashlib.sha256(f"{test_id}:{student_id}:{question_id}".encode()).digest()
     return int.from_bytes(digest[:8], "little")
 
 
-def _sphere(x: np.ndarray) -> float:
-    return float(np.sum(x**2))
-
-
-def _rastrigin(x: np.ndarray) -> float:
-    return float(10 * len(x) + np.sum(x**2 - 10 * np.cos(2 * np.pi * x)))
-
-
-def _rosenbrock(x: np.ndarray) -> float:
-    return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
-
-
-def _ackley(x: np.ndarray) -> float:
-    d = len(x)
-    return float(-20 * np.exp(-0.2 * np.sqrt(np.sum(x**2) / d))
-                 - np.exp(np.sum(np.cos(2 * np.pi * x)) / d) + 20 + np.e)
-
-
-FUNCTIONS: dict[str, Callable[[np.ndarray], float]] = {
-    "sphere": _sphere, "rastrigin": _rastrigin, "rosenbrock": _rosenbrock, "ackley": _ackley}
+# the judge's own (vectorised) functions, without shift or rotation
+FUNCTIONS: dict[str, Fn] = {
+    "sphere": sphere, "rastrigin": rastrigin, "rosenbrock": rosenbrock, "ackley": ackley}
 
 
 def _evaluate(rng: np.random.Generator) -> tuple[dict[str, Any], float]:
     name = str(rng.choice(sorted(FUNCTIONS)))
     dim = int(rng.integers(2, 5))
     x = rng.integers(-3, 4, dim).astype(float) / 2
-    return {"function": name, "dim": dim, "point": x.tolist()}, FUNCTIONS[name](x)
+    return {"function": name, "dim": dim, "point": x.tolist()}, float(FUNCTIONS[name](x[None])[0])
 
 
 def _precision(rng: np.random.Generator) -> tuple[dict[str, Any], float]:
@@ -72,6 +57,12 @@ GENERATORS: dict[str, tuple[Callable[[np.random.Generator], tuple[dict[str, Any]
 def instance(kind: str, seed: int) -> tuple[dict[str, Any], float]:
     """The student's parameters and the correct answer."""
     return GENERATORS[kind][0](np.random.default_rng(seed))
+
+
+def expected(generator: str, test_id: int, student_id: int, question_id: int
+             ) -> tuple[dict[str, Any], float]:
+    """One student's parameters and correct answer for a numeric question."""
+    return instance(generator, personal_seed(test_id, student_id, question_id))
 
 
 PLACEHOLDER = re.compile(r"\{(\w+)\}")

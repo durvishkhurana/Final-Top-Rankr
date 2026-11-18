@@ -42,7 +42,7 @@ in the real container.
 | Corrupting the protocol by printing | stdout/stderr are redirected to the log before user code is loaded |
 | Reading the hidden function | It is not in the container |
 | Contributed fitness functions | Evaluated only in their own container with the same limits (`sandbox/evaluator.py`); the worker relays points over a pipe and treats a stalled evaluator as failed evaluations |
-| Hidden data reaching a language model | Prompts get the code and relative precisions only; seeds, shifts, rotations, reference values and held-out results are never included (`backend/ai/features.py`) |
+| Hidden data reaching a language model | Prompts get the code and relative precisions only; seeds, shifts, rotations, reference values and held-out results are never included (`backend/ai/features.py`, also used by the evolving challenger) |
 
 Every failure is reported to the user as a run status (`error`, `timeout` or
 `crashed`) with a message. A failed run scores 0.
@@ -52,6 +52,7 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
 - Container escape through a kernel vulnerability. Containers share the host kernel.
   Setting `SANDBOX_RUNTIME=runsc` runs submissions under gVisor where it is installed;
   this path is supported by the runner but has not been tested in this project yet.
+  `DEPLOYMENT.md` lists the checks to run after enabling it.
 - The submission can find the protocol pipe inside its own process and write garbage
   to it. This only breaks its own run.
 - A submission can learn about an instance through the values it is given, which is
@@ -65,7 +66,22 @@ Every failure is reported to the user as a run status (`error`, `timeout` or
   cookies (Secure outside development); refresh tokens are single-use.
 - State-changing requests from another origin are refused.
 - Code, logs and error messages of a submission are visible only to its author and admins.
-- Not yet in place: rate limiting of sign-in attempts, email verification, password reset.
+- Sign-in lock: after `LOGIN_MAX_FAILURES` wrong passwords for one email within
+  `LOGIN_WINDOW_MIN` minutes, sign-in to that account is refused (429) until the window
+  has passed or the password is reset. Unknown emails are counted the same way, so a
+  lock does not reveal whether an account exists. The count is per email address, not
+  per IP address: the API sits behind the frontend proxy and cannot trust client
+  addresses on its own. Limit attempts per IP in front of the application (see
+  `DEPLOYMENT.md`) to slow down guessing across many accounts.
+- Email confirmation and password reset use signed links (JWT) that expire after two
+  days and one hour. Each link carries a fingerprint of the account's email and
+  password hash, so a reset link works once and every earlier link stops working when
+  the password changes. At most three links of each kind are sent per address per
+  hour. "Forgot password" answers the same way whether or not the account exists.
+- A password reset signs the account out on every device (all refresh tokens are
+  deleted). With `REQUIRE_VERIFIED_EMAIL=true`, submissions and contributions need a
+  confirmed email address.
+- A daily worker job deletes expired refresh tokens and account events older than a day.
 
 ## Operating notes
 

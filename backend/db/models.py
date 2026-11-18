@@ -22,6 +22,7 @@ class User(Base):
     bio: Mapped[str] = mapped_column(String(500), default="")
     is_bot: Mapped[bool] = mapped_column(default=False)  # baseline entries
     is_demo: Mapped[bool] = mapped_column(default=False)  # seeded demo data, wiped by reset
+    email_verified: Mapped[bool] = mapped_column(default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  server_default=func.now())
 
@@ -32,6 +33,18 @@ class RefreshToken(Base):
     jti: Mapped[str] = mapped_column(String(32), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuthEvent(Base):
+    """Rate-limited account events (failed sign-in, emails sent), keyed by email."""
+
+    __tablename__ = "auth_events"
+    __table_args__ = (Index("ix_auth_events_lookup", "kind", "email", "at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))  # login_failed | verify_sent | reset_sent
+    email: Mapped[str] = mapped_column(String(320))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Problem(Base):
@@ -225,6 +238,45 @@ class AiNote(Base):
     content: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  server_default=func.now())
+
+
+class Challenger(Base):
+    """An AI-written optimizer on one problem and dimension that improves itself one
+    generation at a time. Its best generation is its leaderboard entry."""
+
+    __tablename__ = "challengers"
+    __table_args__ = (UniqueConstraint("problem_id", "dim"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    problem_id: Mapped[str] = mapped_column(ForeignKey("problems.id", ondelete="CASCADE"))
+    dim: Mapped[int]
+    active: Mapped[bool] = mapped_column(default=True)  # evolved by the daily job
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+
+class Generation(Base):
+    """One attempt of a challenger: running -> done | failed."""
+
+    __tablename__ = "challenger_generations"
+    __table_args__ = (UniqueConstraint("challenger_id", "number"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    challenger_id: Mapped[int] = mapped_column(ForeignKey("challengers.id", ondelete="CASCADE"),
+                                               index=True)
+    number: Mapped[int]
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("challenger_generations.id", ondelete="SET NULL"))
+    submission_id: Mapped[int | None] = mapped_column(
+        ForeignKey("submissions.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(20), default="running")
+    approach: Mapped[str] = mapped_column(Text, default="")
+    changes: Mapped[str] = mapped_column(Text, default="")
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.now())
+
+    submission: Mapped[Submission | None] = relationship(lazy="joined")
 
 
 class Contribution(Base):

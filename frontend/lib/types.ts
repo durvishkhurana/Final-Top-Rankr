@@ -10,6 +10,7 @@ export interface Me {
   country: string;
   institution: string;
   bio: string;
+  email_verified: boolean;
 }
 
 export interface Problem {
@@ -373,4 +374,66 @@ export interface SimilarPair {
   token: number;
   structure: number;
   similarity: number;
+}
+
+interface ComparedEntry {
+  submission_id: number;
+  label: string;
+  is_baseline: boolean;
+  score: number;
+  runs: number;
+  mean: number;
+  median: number;
+  ci_low: number;
+  ci_high: number;
+  mean_rank: number | null;
+  ecdf: number[];
+}
+
+interface PairTest {
+  a: number;
+  b: number;
+  p: number;
+  p_holm: number;
+  a12: number;
+  significant: boolean;
+  better: number | null;
+}
+
+export interface Comparison {
+  problem_id: string;
+  dim: number;
+  targets: number[];
+  checkpoints: number[];
+  entries: ComparedEntry[];
+  pairs: PairTest[];
+  blocks: number;
+  friedman_p: number | null;
+  alpha: number;
+}
+
+export interface Generation {
+  number: number;
+  status: "running" | "done" | "failed";
+  approach: string;
+  changes: string;
+  error: string;
+  submission_id: number | null;
+  score: number | null;
+  is_champion: boolean;
+  created_at: string;
+}
+
+export interface Challenger {
+  id: number;
+  problem_id: string;
+  dim: number;
+  active: boolean;
+  generations: number;
+  running: boolean;
+  best_score: number | null;
+}
+
+export interface ChallengerDetail extends Challenger {
+  history: Generation[];
 }

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from judge.instance import make_instance
 from judge.scoring import checkpoints, precision
 
 from ..deps import CurrentUser, Session
+from ..export import Format, table
 from ..schemas import (
     BoardRow,
     Curve,
@@ -143,6 +144,13 @@ async def leaderboard(problem_id: str, dim: int, session: Session) -> list[Board
                  submitted_at=s.created_at)
         for i, s in enumerate(ranked, start=1)
     ]
+
+
+@router.get("/problems/{problem_id}/leaderboard/export")
+async def export_leaderboard(problem_id: str, dim: int, session: Session,
+                             format: Format = "csv") -> Response:
+    rows = [r.model_dump(mode="json") for r in await leaderboard(problem_id, dim, session)]
+    return table(list(BoardRow.model_fields), rows, f"{problem_id}-d{dim}-leaderboard", format)
 
 
 @router.get("/templates", response_model=list[Template])

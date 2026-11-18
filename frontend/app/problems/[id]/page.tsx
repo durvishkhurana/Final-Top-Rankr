@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BoardTable } from "@/components/board-table";
+import { ChallengerPanel } from "@/components/challenger-panel";
 import { CodeEditor } from "@/components/code-editor";
 import { LandscapePlayer } from "@/components/landscape-player";
 import { SolutionView } from "@/components/solution-view";
@@ -17,8 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import type { Problem, ProblemView, Quota, Submission, Template } from "@/lib/types";
-
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
+import { selectClass } from "@/lib/utils";
 
 export default function ProblemPage() {
   const { id } = useParams<{ id: string }>();
@@ -227,7 +227,12 @@ export default function ProblemPage() {
         </TabsContent>
 
         <TabsContent value="board" className="pt-3">
-          {activeDim && <BoardTable problemId={p.id} dim={activeDim} />}
+          {activeDim && (
+            <>
+              <BoardTable problemId={p.id} dim={activeDim} />
+              <ChallengerPanel problemId={p.id} dim={activeDim} />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="mine" className="pt-3">

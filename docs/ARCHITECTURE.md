@@ -91,6 +91,7 @@ erDiagram
         string institution
         bool is_bot "baseline entries"
         bool is_demo "seeded demo data"
+        bool email_verified
     }
     REFRESH_TOKENS {
         string jti PK
@@ -174,6 +175,10 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
 ## Accounts and sessions
 
 - Passwords are hashed with Argon2.
+- Failed sign-ins and emailed links are counted in `auth_events` (by email) for the
+  sign-in lock and the hourly email limit. See `SECURITY.md`.
+- Email confirmation and password-reset links are signed tokens sent by
+  `core/mail.py` (SMTP, or the backend log when no SMTP host is set).
 - Sign-in sets two httpOnly, SameSite=Lax cookies: a 15-minute access token and a
   7-day refresh token (both JWT). They are also marked Secure outside development.
 - A refresh token works once. Using it deletes its database row and issues a new pair,
@@ -197,6 +202,11 @@ The `PROBLEMS` table holds only the public catalogue entry. The functions are co
   `backend/ai/prompts/`, JSON answers validated by schema, cache, daily limits, a log
   row per call in `llm_calls`). See `AI_FEATURES.md`.
 - Analysis and coach notes are stored once per submission in `ai_notes`.
+- Evolving AI challengers (`challengers`, one per problem and dimension) keep every
+  attempt in `challenger_generations` (running -> done or failed), each linked to the
+  submission that was judged and to the champion it started from. The worker job
+  `evolve_challenger` writes and judges one generation; a daily cron job runs it for
+  every active challenger.
 - Contributions (`contributions`) move from `testing` (smoke test queued) to `failed` or
   `pending`, then to `approved` (a `C-NNN` row in `problems`, with its own `lower` and
   `upper`) or `rejected`. Their code runs only in evaluator containers.
@@ -232,16 +242,19 @@ Interactive documentation is served by the API at `/docs`.
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/signup`, `login`, `refresh`, `logout`; `GET /api/auth/me` |
+| Auth | `POST /api/auth/signup`, `login`, `refresh`, `logout`, `verify`, `verify/resend`, `password/forgot`, `password/reset`; `GET /api/auth/me` |
 | Users | `GET /api/users/{id}`, `PATCH /api/users/me` |
 | Problems | `GET /api/problems`, `/problems/{id}`, `/problems/{id}/leaderboard?dim=`, `/problems/{id}/quota`, `/templates` |
 | Submissions | `POST /api/submissions`, `GET /api/submissions`, `GET /api/submissions/{id}` |
 | Boards | `GET /api/leaderboard?by=user|country|institution`, `GET /api/stats` |
+| Research | `GET /api/research/compare?problem_id=&dim=&ids=`, `GET /api/research/runs?...&format=csv|json` |
+| Exports | `GET /api/submissions/{id}/export`, `GET /api/problems/{id}/leaderboard/export?dim=`, `GET /api/contests/{id}/leaderboard/export` (all take `format=csv|json`) |
 | Contests | `GET/POST /api/contests`, `GET /api/contests/{id}`, `POST .../join`, `GET .../leaderboard`, `POST .../finalise` |
 | Courses | `GET/POST /api/courses`, `POST /api/courses/join`, `GET /api/courses/{id}/dashboard` |
 | AI | `GET /api/ai/status`, `GET /api/submissions/{id}/notes`, `POST /api/submissions/{id}/analysis`, `POST /api/submissions/{id}/coach` |
 | Tests | `GET/POST /api/tests`, `GET/PATCH /api/tests/{id}`, `GET/POST /api/tests/{id}/questions`, `PUT/DELETE .../questions/{qid}`, `POST .../distractors`, `.../pool`, `.../approve-pool`, `POST /api/tests/{id}/attempt`, `GET /api/attempts/{id}`, `PUT /api/answers/{id}`, `PUT /api/answers/{id}/follow-up`, `POST /api/attempts/{id}/events`, `POST /api/attempts/{id}/submit`, `GET /api/tests/{id}/results`, `POST /api/answers/{id}/grade`, `POST /api/attempts/{id}/viva` |
 | Similarity | `GET /api/courses/{id}/similarity?problem_id=&dim=`, `POST /api/courses/{id}/similarity/opinion` |
+| Challengers | `GET /api/challengers?problem_id=&dim=`, `GET /api/challengers/{id}`; admin: `POST /api/challengers`, `PATCH /api/challengers/{id}`, `POST /api/challengers/{id}/evolve` |
 | Contributions | `GET/POST /api/contributions`, `POST /api/contributions/build`, `GET /api/admin/contributions`, `POST /api/admin/contributions/{id}/approve|reject` |
 | Admin | `GET/PATCH /api/admin/users`, `GET/PATCH /api/admin/problems`, `POST /api/admin/problems/{id}/baselines`, `POST /api/admin/problems/{id}/ai-baseline`, `GET /api/admin/submissions` |
 

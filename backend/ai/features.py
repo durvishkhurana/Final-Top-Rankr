@@ -31,6 +31,13 @@ class BaselineCode(BaseModel):
     code: str = Field(description="Complete Python source defining optimize(...)")
 
 
+class ChallengerCode(BaseModel):
+    approach: str = Field(description="One sentence naming the approach")
+    changes: str = Field(description="What changed from the previous version and why, "
+                                     "in one to three sentences")
+    code: str = Field(description="Complete Python source defining optimize(...)")
+
+
 class BuiltProblem(BaseModel):
     name: str = Field(max_length=100)
     summary: str = Field(max_length=300)

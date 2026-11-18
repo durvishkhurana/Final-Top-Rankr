@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useProblems } from "@/components/problem-picker";
 import { Empty, ErrorNote, Loading, PageTitle } from "@/components/state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,13 +16,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, post } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
-import type { Contest, Course, Problem } from "@/lib/types";
+import type { Contest, Course } from "@/lib/types";
 
 const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
 function CreateContest({ onDone }: { onDone: () => void }) {
   const router = useRouter();
-  const problems = useQuery({ queryKey: ["problems"], queryFn: () => api<Problem[]>("/problems") });
+  const problems = useProblems();
   const courses = useQuery({ queryKey: ["courses"], queryFn: () => api<Course[]>("/courses") });
   const [tasks, setTasks] = useState<string[]>([]); // "problem@dim"
   const create = useMutation({

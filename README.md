@@ -12,6 +12,9 @@ problem instances, and ranks algorithms by server-side results.
 - The format follows the NeurIPS 2020 Black-Box Optimization Challenge, turned into a
   permanent platform for classrooms and research groups.
 
+New to the project? [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) explains all of it in
+plain English.
+
 ## What is built
 
 - **Judge.** 25 built-in problems: ten TopRanker originals and a standard set of eight
@@ -20,7 +23,8 @@ problem instances, and ranks algorithms by server-side results.
   container; the objective function never enters it. Budget enforcement, convergence
   traces, AOCC scoring, and three baselines (random search, differential evolution,
   CMA-ES) judged like any submission.
-- **Web platform.** Accounts with student, instructor and admin roles; problem
+- **Web platform.** Accounts with student, instructor and admin roles, email
+  confirmation, password reset and a sign-in lock after repeated wrong passwords; problem
   catalogue; code submission with an in-browser editor and starter templates; live run
   status; per-submission convergence chart and run table; per-problem leaderboards with
   baselines; global leaderboards by person, country and institution; statistics page;
@@ -43,16 +47,31 @@ problem instances, and ranks algorithms by server-side results.
   instructor; nothing fails a student automatically. See [docs/PRIVACY.md](docs/PRIVACY.md).
 - **AI features** (optional, Groq and Gemini). An analysis of what a submitted
   algorithm really is, a run coach that diagnoses the judged runs from summary
-  statistics, an AI-written baseline on the leaderboard, and a problem builder that
+  statistics, an AI-written baseline on the leaderboard, an evolving AI challenger that
+  rewrites its own optimizer one generation at a time from the judge's feedback, and a
+  problem builder that
   drafts a fitness function from words or a picture of the formula. See
   [docs/AI_FEATURES.md](docs/AI_FEATURES.md).
+- **Research statistics and exports.** A research page that compares chosen entries on
+  one problem: mean AOCC with bootstrap confidence intervals, mean ranks and a Friedman
+  test over the shared runs, pairwise Mann-Whitney U tests with Holm's correction and
+  the A12 effect size, and COCO-style runtime distributions (ECDF). Every submission's
+  runs, every leaderboard and every contest ranking can be downloaded as CSV or JSON.
+  See [docs/RESEARCH.md](docs/RESEARCH.md).
 - **Contributed problems.** Users propose fitness functions; each is smoke-tested in a
   sandbox container and reviewed by an admin before it joins the catalogue.
 - **Operations.** Per-user, per-problem submission cooldown and daily cap; a job queue
   between the API and the judge; reference values that tighten automatically when a
   run beats them, with every affected submission re-scored.
 
-Screenshots: _to be added._
+## Screenshots
+
+| | |
+|---|---|
+| ![Problem catalogue](docs/screenshots/problems.png) | ![A judged submission with its convergence against the baselines](docs/screenshots/submission.png) |
+| Problem catalogue | A judged submission: score, convergence against the baselines, every run |
+| ![Global leaderboard](docs/screenshots/leaderboard.png) | ![Statistical comparison on the research page](docs/screenshots/research.png) |
+| Global leaderboard | Research page: confidence intervals, pairwise tests, runtime distributions |
 
 ## Architecture
 
@@ -68,7 +87,8 @@ flowchart LR
 ```
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/JUDGE.md](docs/JUDGE.md),
-[docs/SECURITY.md](docs/SECURITY.md).
+[docs/SECURITY.md](docs/SECURITY.md). Running it on a server with HTTPS:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Quick start
 
@@ -121,18 +141,22 @@ All configuration is in `.env`; see [.env.example](.env.example).
 | `SANDBOX_IMAGE`, `SANDBOX_RUNTIME`, `SANDBOX_CPU`, `SANDBOX_MEMORY_MB`, `SANDBOX_TIMEOUT_SEC` | Limits for each run |
 | `SUBMIT_COOLDOWN_SEC`, `SUBMIT_DAILY_CAP` | Submission rate limits, per user and problem |
 | `HELDOUT_SECRET` | Secret that determines the held-out contest instances (defaults to `JWT_SECRET`) |
+| `LOGIN_MAX_FAILURES`, `LOGIN_WINDOW_MIN` | Sign-in lock after repeated wrong passwords |
+| `REQUIRE_VERIFIED_EMAIL` | Submissions and contributions need a confirmed email |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS` | Outgoing email; without a host, emails go to the backend log |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First admin account, created by the seed script |
 
 ## Project structure
 
 ```
-frontend/    Next.js app
+frontend/    Next.js app, browser tests (e2e/)
 backend/     API (api/), settings and security (core/), models and migrations (db/, alembic/),
              judge (judge/), tests (tests/)
 worker/      Queue worker
 sandbox/     Sandbox image and in-container harness
 problems/    Public problem catalogue
 scripts/     Setup, seed, reset, local judging, reference values
+deploy/      Reverse proxy (Caddy) for docker-compose.prod.yml
 docs/        Documentation
 ```
 
@@ -155,19 +179,25 @@ npx eslint . && npm run typecheck && npm test
 npm run dev
 ```
 
+Browser tests (Playwright) start a production build of the whole stack against the
+database in `DATABASE_URL`, so point it at a throwaway database. They need Postgres and
+Redis running, the sandbox image and a Chromium (`npx playwright install chromium`):
+
+```bash
+DATABASE_URL=postgresql+asyncpg://topranker:<password>@127.0.0.1:5432/topranker_e2e \
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=<any> sh scripts/e2e.sh
+```
+
+They cover signing up, email confirmation, password reset and the sign-in lock;
+submitting from the editor and following the judged runs; the leaderboard, the research
+comparison and downloads; the admin pages and AI challengers. Logs are written to
+`/tmp/topranker-e2e`.
+
 Judge a file from the command line, without the web app:
 
 ```bash
 python scripts/run_local.py my_optimizer.py --problem TR-003 --dim 5
 ```
-
-## Roadmap
-
-Not built yet:
-
-- Evolving AI challenger
-- Research statistics and exports
-- Browser end-to-end tests, deployment guide
 
 ## License
 

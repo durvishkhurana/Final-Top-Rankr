@@ -1,0 +1,31 @@
+# Production overlay: adds HTTPS in front of the frontend and production settings.
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Needs DOMAIN in .env and DNS for it pointing at this host. See docs/DEPLOYMENT.md.
+services:
+  backend:
+    environment:
+      APP_ENV: production
+      FRONTEND_URL: https://${DOMAIN}
+  worker:
+    environment:
+      APP_ENV: production
+      FRONTEND_URL: https://${DOMAIN}
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

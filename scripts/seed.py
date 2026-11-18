@@ -23,13 +23,12 @@ sys.path.insert(0, str(ROOT / "backend"))
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-from api.routes.admin import baseline_user  # noqa: E402
 from core.config import get_settings  # noqa: E402
 from core.security import hash_password  # noqa: E402
 from db.base import sessionmaker  # noqa: E402
 from db.models import Problem, Submission, User  # noqa: E402
 from db.results import judge_refs, store_result  # noqa: E402
-from db.seed import ensure_admin, load_f_refs, sync_catalogue  # noqa: E402
+from db.seed import bot_user, ensure_admin, load_f_refs, sync_catalogue  # noqa: E402
 from judge import baselines, templates  # noqa: E402
 from judge.evaluate import judge  # noqa: E402
 from judge.functions import PROBLEMS  # noqa: E402
@@ -79,7 +78,7 @@ async def seed_baselines(session: AsyncSession) -> None:
     print("Judging baselines (this takes a while)...")
     problems = list(await session.scalars(select(Problem).order_by(Problem.id)))
     for key in baselines.NAMES:
-        bot = await baseline_user(session, key)
+        bot = await bot_user(session, key)
         await session.commit()
         done = set((await session.execute(
             select(Submission.problem_id, Submission.dim)
@@ -103,14 +102,15 @@ async def seed_demo(session: AsyncSession) -> str | None:
     for i, (name, role, country, institution) in enumerate(DEMO_PEOPLE):
         user = User(email=f"demo{i}@topranker.invalid" if i else "instructor@topranker.invalid",
                     name=name, role=role, country=country, institution=institution,
-                    password_hash=hashed, is_demo=True)
+                    password_hash=hashed, is_demo=True, email_verified=True)
         session.add(user)
         await session.commit()
         if role != "student":
             continue
         # each student tries a few optimizers on a handful of problems, improving over time
         for problem_id in rng.sample(problem_ids, rng.randint(5, 9)):
-            dim = rng.choice([5, 5, 5, 10])
+            dims = PROBLEMS[problem_id].dims  # mostly the smallest, sometimes the next
+            dim = dims[1] if len(dims) > 1 and rng.random() < 0.25 else dims[0]
             picks = sorted(rng.sample(range(len(DEMO_OPTIMIZERS)), rng.randint(1, 3)))
             start = now - timedelta(days=rng.uniform(2, 29))
             for attempt, pick in enumerate(picks):

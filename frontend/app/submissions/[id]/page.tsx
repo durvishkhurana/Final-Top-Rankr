@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AiNotes } from "@/components/ai-notes";
 import { CodeEditor } from "@/components/code-editor";
 import { ConvergenceChart } from "@/components/convergence-chart";
+import { Downloads } from "@/components/downloads";
 import { LandscapePlayer } from "@/components/landscape-player";
 import { SolutionView } from "@/components/solution-view";
 import { ErrorNote, Loading } from "@/components/state";
@@ -16,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api";
 import { fmtDate, fmtPrecision, fmtScore } from "@/lib/format";
 import type { Curves, Problem, ProblemView, SubmissionDetail } from "@/lib/types";
+import { selectClass } from "@/lib/utils";
 
 export default function SubmissionPage() {
   const { id } = useParams<{ id: string }>();
@@ -119,7 +121,7 @@ export default function SubmissionPage() {
                 <label htmlFor="run">Run</label>
                 <select
                   id="run"
-                  className="h-8 rounded-lg border bg-background px-2 text-sm"
+                  className={selectClass}
                   value={`${run.instance_seed}-${run.seed}`}
                   onChange={(e) => setPicked(e.target.value)}
                 >
@@ -158,7 +160,10 @@ export default function SubmissionPage() {
           )}
 
           <section>
-            <h2 className="mb-2 text-lg font-medium">Runs</h2>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-medium">Runs</h2>
+              <Downloads path={`/submissions/${sub.id}/export`} label="Runs with convergence:" />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>

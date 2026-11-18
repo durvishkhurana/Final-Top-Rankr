@@ -4,7 +4,6 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-import numpy as np
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from judge.evaluate import score_runs
 from judge.functions import PROBLEMS
+from judge.scoring import precision
 
 from .models import FRef, Run, Submission
 
@@ -29,11 +29,16 @@ async def load_f_ref(session: AsyncSession, problem_id: str, dim: int) -> dict[i
 async def ref_lookup(session: AsyncSession, problem_id: str, dim: int
                      ) -> Callable[[int], float | None]:
     """Reference value by instance seed, for turning stored traces into precisions."""
-    problem = PROBLEMS[problem_id]
-    if problem.z_opt is not None:
-        f_opt = float(problem.fn(np.full((1, dim), problem.z_opt))[0])
+    f_opt = PROBLEMS[problem_id].optimum(dim)
+    if f_opt is not None:
         return lambda seed: f_opt
     return (await load_f_ref(session, problem_id, dim)).get
+
+
+def precision_trace(run: Run, f_ref: float | None) -> list[float | None]:
+    """Precision at each checkpoint of a run; None where nothing is known or it failed."""
+    return [None if v is None or f_ref is None or run.status != "ok" else precision(v, f_ref)
+            for v in run.trace]
 
 
 async def store_result(session: AsyncSession, sub: Submission, out: dict[str, Any]) -> None:

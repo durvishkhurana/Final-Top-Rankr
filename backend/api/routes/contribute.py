@@ -9,7 +9,7 @@ from ai.features import BuiltProblem
 from db.contributed import register
 from db.models import Contribution, Problem
 
-from ..deps import AdminUser, CurrentUser, Enqueue, Session
+from ..deps import AdminUser, CurrentUser, Enqueue, Session, VerifiedUser
 from ..schemas import BuildIn, ContributionIn, ContributionOut
 from .ai import guarded
 
@@ -26,7 +26,7 @@ def _check(lower: float, upper: float, dims: list[int]) -> None:
 
 
 @router.post("/contributions", response_model=ContributionOut, status_code=201)
-async def contribute(body: ContributionIn, user: CurrentUser, session: Session,
+async def contribute(body: ContributionIn, user: VerifiedUser, session: Session,
                      enqueue: Enqueue) -> Contribution:
     """Proposes a fitness function. It is smoke-tested in a sandbox container and then
     waits for an admin to approve it."""
@@ -39,7 +39,7 @@ async def contribute(body: ContributionIn, user: CurrentUser, session: Session,
 
 
 @router.post("/contributions/build", response_model=ContributionOut, status_code=201)
-async def build(body: BuildIn, user: CurrentUser, session: Session, enqueue: Enqueue
+async def build(body: BuildIn, user: VerifiedUser, session: Session, enqueue: Enqueue
                 ) -> Contribution:
     """Drafts a problem from a description in words, optionally with an image of the
     formula. The draft goes through the same smoke test and admin approval."""

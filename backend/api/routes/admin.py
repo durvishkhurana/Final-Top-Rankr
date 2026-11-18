@@ -2,10 +2,11 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from ai import llm
+from ai.challenger import baseline_prompt
 from ai.features import BaselineCode
 from db.models import Problem, Submission, User
+from db.seed import bot_user
 from judge import baselines
-from judge.scoring import default_budget
 
 from ..deps import AdminUser, Enqueue, Session
 from ..schemas import ActiveIn, BaselinesIn, ProblemOut, RoleIn, SubmissionOut
@@ -14,14 +15,6 @@ from .ai import guarded
 from .submissions import _out
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-BASELINE_NAMES = {
-    "random_search": "Random search",
-    "differential_evolution": "Differential evolution (SciPy)",
-    "cmaes": "CMA-ES",
-    "ai": "AI-written optimizer",
-}
-
 
 @router.get("/users", response_model=list[AdminUserOut])
 async def list_users(_: AdminUser, session: Session) -> list[User]:
@@ -61,17 +54,6 @@ async def recent_submissions(_: AdminUser, session: Session) -> list[SubmissionO
     return [_out(s) for s in subs.unique()]
 
 
-async def baseline_user(session: Session, key: str) -> User:
-    email = f"{key}@baseline.invalid"
-    user = await session.scalar(select(User).where(User.email == email))
-    if user is None:
-        user = User(email=email, name=f"{BASELINE_NAMES[key]} (baseline)", password_hash="!",
-                    is_bot=True)
-        session.add(user)
-        await session.flush()
-    return user
-
-
 @router.post("/problems/{problem_id}/baselines", response_model=list[SubmissionOut],
              status_code=201)
 async def run_baselines(problem_id: str, body: BaselinesIn, _: AdminUser, session: Session,
@@ -82,7 +64,7 @@ async def run_baselines(problem_id: str, body: BaselinesIn, _: AdminUser, sessio
         raise HTTPException(404, "Problem or dimension not found")
     subs = []
     for key in baselines.NAMES:
-        bot = await baseline_user(session, key)
+        bot = await bot_user(session, key)
         subs.append(Submission(user_id=bot.id, problem_id=problem_id, dim=body.dim,
                                code=baselines.source(key)))
     session.add_all(subs)
@@ -102,14 +84,10 @@ async def ai_baseline(problem_id: str, body: BaselinesIn, admin: AdminUser, sess
     problem = await session.get(Problem, problem_id)
     if problem is None or body.dim not in problem.dims:
         raise HTTPException(404, "Problem or dimension not found")
-    lower = problem.lower if problem.lower is not None else -problem.bound
-    upper = problem.upper if problem.upper is not None else problem.bound
     answer: BaselineCode = await guarded(lambda: llm.ask(
         session, feature="ai_baseline", user_id=admin.id, schema=BaselineCode,
-        prompt=llm.render("baseline.v1", name=problem.name, dim=body.dim, lower=lower,
-                          upper=upper, budget=default_budget(body.dim),
-                          description=problem.description)))
-    bot = await baseline_user(session, "ai")
+        prompt=baseline_prompt(problem, body.dim)))
+    bot = await bot_user(session, "ai")
     sub = Submission(user_id=bot.id, problem_id=problem_id, dim=body.dim, code=answer.code)
     session.add(sub)
     await session.commit()

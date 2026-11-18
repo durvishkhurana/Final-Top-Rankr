@@ -14,21 +14,34 @@ from .contests import new_code
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
+def teaches(course: Course, user: User) -> bool:
+    return user.role == "admin" or course.instructor_id == user.id
+
+
+async def _outs(session: AsyncSession, courses: list[Course], user: User) -> list[CourseOut]:
+    """Courses as the viewer sees them, with two queries however many there are."""
+    ids = [c.id for c in courses]
+    students = {k: v for k, v in await session.execute(
+        select(Enrollment.course_id, func.count()).where(Enrollment.course_id.in_(ids))
+        .group_by(Enrollment.course_id))}
+    names = {k: v for k, v in await session.execute(select(User.id, User.name).where(
+        User.id.in_({c.instructor_id for c in courses})))}
+    return [CourseOut(id=c.id, title=c.title, description=c.description,
+                      instructor=names.get(c.instructor_id, ""), students=students.get(c.id, 0),
+                      teaches=teaches(c, user),
+                      invite_code=c.invite_code if teaches(c, user) else None)
+            for c in courses]
+
+
 async def _out(session: AsyncSession, course: Course, user: User) -> CourseOut:
-    teaches = user.role == "admin" or course.instructor_id == user.id
-    students = await session.scalar(select(func.count()).select_from(Enrollment)
-                                    .where(Enrollment.course_id == course.id)) or 0
-    instructor = await session.get(User, course.instructor_id)
-    return CourseOut(id=course.id, title=course.title, description=course.description,
-                     instructor=instructor.name if instructor else "", students=students,
-                     teaches=teaches, invite_code=course.invite_code if teaches else None)
+    return (await _outs(session, [course], user))[0]
 
 
 async def teaching(session: AsyncSession, course_id: int, user: User) -> Course:
     course = await session.get(Course, course_id)
     if course is None:
         raise HTTPException(404, "Course not found")
-    if user.role != "admin" and course.instructor_id != user.id:
+    if not teaches(course, user):
         raise HTTPException(403, "Only the instructor can see this")
     return course
 
@@ -51,7 +64,7 @@ async def my_courses(user: CurrentUser, session: Session) -> list[CourseOut]:
     courses = await session.scalars(
         select(Course).where((Course.instructor_id == user.id) | Course.id.in_(enrolled))
         .order_by(Course.id.desc()))
-    return [await _out(session, c, user) for c in courses]
+    return await _outs(session, list(courses), user)
 
 
 @router.post("/join", response_model=CourseOut)

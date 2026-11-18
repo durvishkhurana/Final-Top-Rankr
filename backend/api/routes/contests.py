@@ -1,7 +1,7 @@
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from db.models import (
 )
 
 from ..deps import CurrentUser, Enqueue, OptionalUser, Session
+from ..export import Format, table
 from ..schemas import ContestBoardRow, ContestIn, ContestOut, JoinIn
 
 router = APIRouter(prefix="/contests", tags=["contests"])
@@ -45,18 +46,26 @@ async def is_participant(session: AsyncSession, contest_id: int, user_id: int) -
     return await session.get(ContestEntry, (contest_id, user_id)) is not None
 
 
+async def _outs(session: AsyncSession, contests: list[Contest], user: User | None
+                ) -> list[ContestOut]:
+    """Contests as the viewer sees them, with two queries however many there are."""
+    ids = [c.id for c in contests]
+    counts = {k: v for k, v in await session.execute(
+        select(ContestEntry.contest_id, func.count()).where(ContestEntry.contest_id.in_(ids))
+        .group_by(ContestEntry.contest_id))}
+    joined = set(await session.scalars(select(ContestEntry.contest_id).where(
+        ContestEntry.contest_id.in_(ids), ContestEntry.user_id == user.id))) if user else set()
+    return [ContestOut(
+        id=c.id, title=c.title, description=c.description, tasks=c.tasks,
+        starts_at=c.starts_at, ends_at=c.ends_at, phase=phase(c),
+        invite_only=c.invite_code is not None, course_id=c.course_id,
+        hint_level=c.hint_level, participants=counts.get(c.id, 0),
+        can_manage=can_manage(c, user), joined=c.id in joined,
+        invite_code=c.invite_code if can_manage(c, user) else None) for c in contests]
+
+
 async def _out(session: AsyncSession, contest: Contest, user: User | None) -> ContestOut:
-    count = await session.scalar(select(func.count()).select_from(ContestEntry)
-                                 .where(ContestEntry.contest_id == contest.id)) or 0
-    manage = can_manage(contest, user)
-    return ContestOut(
-        id=contest.id, title=contest.title, description=contest.description,
-        tasks=contest.tasks, starts_at=contest.starts_at, ends_at=contest.ends_at,
-        phase=phase(contest), invite_only=contest.invite_code is not None,
-        course_id=contest.course_id, hint_level=contest.hint_level, participants=count,
-        can_manage=manage,
-        joined=user is not None and await is_participant(session, contest.id, user.id),
-        invite_code=contest.invite_code if manage else None)
+    return (await _outs(session, [contest], user))[0]
 
 
 async def _get(session: AsyncSession, contest_id: int) -> Contest:
@@ -100,7 +109,7 @@ async def list_contests(user: OptionalUser, session: Session) -> list[ContestOut
     contests = await session.scalars(
         select(Contest).where(Contest.course_id.is_(None) | Contest.course_id.in_(mine))
         .order_by(Contest.starts_at.desc()))
-    return [await _out(session, c, user) for c in contests]
+    return await _outs(session, list(contests), user)
 
 
 @router.get("/{contest_id}", response_model=ContestOut)
@@ -152,6 +161,18 @@ async def leaderboard(contest_id: int, session: Session) -> list[ContestBoardRow
                             is_baseline=users[uid].is_bot, total=sum(per.values()),
                             scores=per, final=final)
             for i, (uid, per) in enumerate(ordered, start=1)]
+
+
+@router.get("/{contest_id}/leaderboard/export")
+async def export_leaderboard(contest_id: int, session: Session, format: Format = "csv"
+                             ) -> Response:
+    """The ranking with one column per task (problem@dim)."""
+    contest = await _get(session, contest_id)
+    tasks = [f"{t['problem_id']}@{t['dim']}" for t in contest.tasks]
+    rows = [{**r.model_dump(exclude={"scores"}), **{t: r.scores.get(t) for t in tasks}}
+            for r in await leaderboard(contest_id, session)]
+    return table(["rank", "user_id", "name", "is_baseline", "final", "total", *tasks], rows,
+                 f"contest-{contest_id}-ranking", format)
 
 
 @router.post("/{contest_id}/finalise", response_model=ContestOut)

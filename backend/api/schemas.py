@@ -24,6 +24,18 @@ class LoginIn(BaseModel):
     password: str = Field(max_length=200)
 
 
+class EmailIn(BaseModel):
+    email: EmailStr
+
+
+class TokenIn(BaseModel):
+    token: str = Field(max_length=1000)
+
+
+class ResetIn(TokenIn):
+    password: str = Field(min_length=8, max_length=200)
+
+
 class ProfileIn(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     country: str | None = Field(default=None, max_length=80)
@@ -39,6 +51,7 @@ class Me(Model):
     country: str
     institution: str
     bio: str
+    email_verified: bool
 
 
 class ProfileSubmission(Model):
@@ -567,3 +580,76 @@ class SimilarPair(BaseModel):
 class OpinionIn(BaseModel):
     a: int
     b: int
+
+
+# --- research ---------------------------------------------------------------------------
+
+
+class ComparedEntry(BaseModel):
+    submission_id: int
+    label: str
+    is_baseline: bool
+    score: float
+    runs: int
+    mean: float  # of per-run AOCC
+    median: float
+    ci_low: float  # 95% bootstrap interval of the mean
+    ci_high: float
+    mean_rank: float | None = None  # over the shared (instance, seed) runs; 1 is best
+    ecdf: list[float]  # fraction of (run, target) pairs reached, per checkpoint
+
+
+class PairTest(BaseModel):
+    a: int
+    b: int
+    p: float  # Mann-Whitney U, two-sided
+    p_holm: float
+    a12: float  # probability that a run of a beats a run of b
+    significant: bool
+    better: int | None
+
+
+class Comparison(BaseModel):
+    problem_id: str
+    dim: int
+    targets: list[float]
+    checkpoints: list[int]
+    entries: list[ComparedEntry]
+    pairs: list[PairTest]
+    blocks: int
+    friedman_p: float | None
+    alpha: float
+
+
+# --- AI challenger ----------------------------------------------------------------------
+
+
+class ChallengerIn(BaseModel):
+    problem_id: str
+    dim: int
+
+
+class GenerationOut(BaseModel):
+    number: int
+    status: str  # running | done | failed
+    approach: str
+    changes: str
+    error: str
+    submission_id: int | None
+    score: float | None
+    is_champion: bool
+    created_at: datetime
+
+
+class ChallengerOut(BaseModel):
+    id: int
+    problem_id: str
+    dim: int
+    active: bool
+    generations: int
+    running: bool
+    best_score: float | None
+
+
+class ChallengerDetail(ChallengerOut):
+    history: list[GenerationOut]

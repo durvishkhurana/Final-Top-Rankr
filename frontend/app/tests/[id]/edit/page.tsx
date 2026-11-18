@@ -5,27 +5,25 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { useProblems } from "@/components/problem-picker";
 import { ErrorNote, Loading } from "@/components/state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api, patch, post } from "@/lib/api";
+import { api, patch, post, put } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import type { Exam, Problem, Question } from "@/lib/types";
+import { cn, selectClass } from "@/lib/utils";
 
 type Kit = { generators: Record<string, string>; facts: string[] };
-const selectClass = "h-8 w-full rounded-lg border bg-background px-2 text-sm";
+const fullSelect = cn(selectClass, "w-full");
 const lines = (s: string) =>
   s
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-
-function put<T>(path: string, body: unknown) {
-  return api<T>(path, { method: "PUT", body: JSON.stringify(body) });
-}
 
 function QuestionForm({
   examId,
@@ -77,7 +75,7 @@ function QuestionForm({
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="space-y-1">
           <Label htmlFor="kind">Type</Label>
-          <select id="kind" className={selectClass} value={kind} onChange={(e) => setKind(e.target.value as Question["kind"])}>
+          <select id="kind" className={fullSelect} value={kind} onChange={(e) => setKind(e.target.value as Question["kind"])}>
             <option value="mcq">Multiple choice</option>
             <option value="numeric">Numeric, personalised (answer computed by code)</option>
             <option value="reasoning">One-line reasoning about the student&apos;s own run</option>
@@ -86,7 +84,7 @@ function QuestionForm({
         {kind === "numeric" && (
           <div className="space-y-1">
             <Label htmlFor="generator">Task</Label>
-            <select id="generator" className={selectClass} value={generator} onChange={(e) => setGenerator(e.target.value)}>
+            <select id="generator" className={fullSelect} value={generator} onChange={(e) => setGenerator(e.target.value)}>
               {Object.keys(kit.generators).map((g) => (
                 <option key={g}>{g}</option>
               ))}
@@ -136,7 +134,7 @@ function QuestionForm({
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1">
             <Label htmlFor="problem">About submissions to</Label>
-            <select id="problem" className={selectClass} value={problemId} onChange={(e) => setProblemId(e.target.value)}>
+            <select id="problem" className={fullSelect} value={problemId} onChange={(e) => setProblemId(e.target.value)}>
               {problems.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.id} {p.name}
@@ -146,7 +144,7 @@ function QuestionForm({
           </div>
           <div className="space-y-1">
             <Label htmlFor="dim">Dimension</Label>
-            <select id="dim" name="dim" className={selectClass}>
+            <select id="dim" name="dim" className={fullSelect}>
               {problem?.dims.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -284,7 +282,7 @@ export default function EditTestPage() {
   const exam = useQuery({ queryKey: ["test", id], queryFn: () => api<Exam>(`/tests/${id}`) });
   const questions = useQuery({ queryKey: ["questions", id], queryFn: () => api<Question[]>(`/tests/${id}/questions`) });
   const kit = useQuery({ queryKey: ["question-kit"], queryFn: () => api<Kit>("/tests/question-kit") });
-  const problems = useQuery({ queryKey: ["problems"], queryFn: () => api<Problem[]>("/problems") });
+  const problems = useProblems();
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["test", id] });
     queryClient.invalidateQueries({ queryKey: ["questions", id] });
