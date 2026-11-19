@@ -421,6 +421,7 @@ export interface Generation {
   submission_id: number | null;
   score: number | null;
   is_champion: boolean;
+  parent: number | null; // generation it was written from
   created_at: string;
 }
 

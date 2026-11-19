@@ -26,6 +26,7 @@ async def _out(session: AsyncSession, c: Challenger, detail: bool = False) -> Ch
 
 def _build(c: Challenger, gens: list[Generation], detail: bool) -> ChallengerDetail:
     best = champion(gens)
+    number = {g.id: g.number for g in gens}
     return ChallengerDetail(
         id=c.id, problem_id=c.problem_id, dim=c.dim, active=c.active, generations=len(gens),
         running=running(gens),
@@ -34,7 +35,9 @@ def _build(c: Challenger, gens: list[Generation], detail: bool) -> ChallengerDet
             number=g.number, status=g.status, approach=g.approach, changes=g.changes,
             error=g.error, submission_id=g.submission_id, created_at=g.created_at,
             score=g.submission.score if g.status == "done" and g.submission else None,
-            is_champion=g is best) for g in gens] if detail else [])
+            is_champion=g is best,
+            parent=number.get(g.parent_id) if g.parent_id else None)
+            for g in gens] if detail else [])
 
 
 async def _get(session: AsyncSession, challenger_id: int) -> Challenger:

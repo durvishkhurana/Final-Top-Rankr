@@ -9,7 +9,7 @@ with no provider key set they are switched off and the pages say so.
 | Provider | Used for | Setting |
 |---|---|---|
 | Groq | Text requests (analysis, coach, AI baseline) | `GROQ_API_KEY`, `GROQ_MODEL` (default `openai/gpt-oss-120b`) |
-| Gemini | Image input (problem builder with a formula picture) and fallback when Groq fails | `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| Gemini | Image input (problem builder with a formula picture), the results write-up, and fallback when Groq fails | `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-2.5-flash`) |
 
 Gemini's free tier allows few calls a day, so `GEMINI_DAILY_LIMIT` caps it. Each user
 also has `AI_DAILY_LIMIT_PER_USER` requests a day, and the whole server
@@ -79,8 +79,17 @@ press "Evolve now" or pause a challenger. Only one generation of a challenger ru
 time. Each generation is one AI request counted against the challenger bot's own daily
 limit (`AI_DAILY_LIMIT_PER_USER`) and the global one. When the model is unavailable the
 generation is recorded as failed with the reason, and the champion stays. The problem
-page shows every generation's score, approach and changes; its code stays private like
-any submission's.
+page shows every generation's score, approach and changes, and which generation each
+one was written from (its lineage); its code stays private like any submission's.
+
+**Results write-up** (`POST /api/research/writeup`, signed in, button on `/research`).
+Drafts a results paragraph for a comparison. The model gets verdicts only: the entries
+as letters, their order by mean AOCC, the Friedman verdict and, for each pair, whether
+one is significantly better and how large the effect is (negligible, small, medium,
+large). It never sees names or numbers. Letters are replaced by names afterwards, and any
+sentence that still holds a digit is dropped, so every number on the page comes from the
+tables. Gemini is preferred, with Groq as fallback; the call counts against the user's
+daily limit.
 
 **Problem builder** (`POST /api/contributions/build`). A user describes a fitness
 function in words, optionally with a PNG or JPEG of the formula (at most 2 MB; image
