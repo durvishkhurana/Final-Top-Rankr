@@ -17,7 +17,9 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
   return (
     <Card className="mx-auto mt-8 max-w-sm">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>
+          <h1>{title}</h1>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">{children}</CardContent>
     </Card>

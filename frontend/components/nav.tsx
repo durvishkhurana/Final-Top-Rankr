@@ -38,7 +38,7 @@ export function Nav() {
         <Link href="/" className="text-lg font-semibold tracking-tight">
           TopRanker
         </Link>
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {LINKS.map(([href, label]) => (
             <Link
               key={href}
