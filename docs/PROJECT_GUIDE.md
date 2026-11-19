@@ -231,7 +231,7 @@ The AI only writes **text and code**; every score and number comes from the judg
 | **Algorithm analysis** | Reads your code and says which algorithm family it really is and how it mutates, combines, selects and restarts. |
 | **Run coach** | Looks at summary numbers from your runs (how fast you improved, when you got stuck) and gives one suggestion. Contest organisers can turn it off or make it give ideas only. |
 | **AI baseline** | Writes an optimizer from the public description only, which is judged like anyone's. |
-| **Evolving AI challenger** | The AI's own entry that **gets better over time**. Generation 1 is written from the description. Each next generation sees the best version so far, how it did, the earlier attempts and the best human score, and tries to improve. Every generation is judged in the sandbox; the best one is the challenger's leaderboard entry. It evolves once a day, or when an admin presses "Evolve now". |
+| **Evolving AI challenger** | The AI's own entry that **gets better over time**. Generation 1 is written from the description. Each next generation sees the best version so far, how it did, the earlier attempts and the best human score, and tries to improve. Every generation is judged in the sandbox; the best one is the challenger's leaderboard entry. It evolves once a day, or when an admin presses "Evolve now". Each generation shows which earlier one it was built from. |
 | **Problem builder** | Turns a description (or a photo of a formula) into a draft problem, which is then safety-tested and reviewed by an admin. |
 | **Test helpers** | Wrong-answer suggestions for multiple-choice questions, many phrasings of a reasoning question, a follow-up question, grading against the rubric, viva questions, and a second opinion on suspicious code pairs. |
 
@@ -258,7 +258,10 @@ Pick a problem, tick up to eight entries and press Compare. You get:
   have reached after a given number of evaluations.
 
 Everything can be downloaded as CSV or JSON for your own analysis in Excel, R or
-Python. Details: [RESEARCH.md](RESEARCH.md).
+Python, and a comparison also as a LaTeX table for a paper or a zip that IOHanalyzer
+opens. Signed-in users can ask the AI to draft a results paragraph; it is given only the
+verdicts, so it states who did better without quoting any number. Details:
+[RESEARCH.md](RESEARCH.md).
 
 ---
 

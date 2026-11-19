@@ -49,7 +49,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <Card className="mx-auto mt-8 max-w-sm">
       <CardHeader>
-        <CardTitle>{mode === "login" ? "Sign in" : "Create an account"}</CardTitle>
+        <CardTitle>
+          <h1>{mode === "login" ? "Sign in" : "Create an account"}</h1>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">

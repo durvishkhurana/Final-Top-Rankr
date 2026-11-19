@@ -13,7 +13,7 @@ problem instances, and ranks algorithms by server-side results.
   permanent platform for classrooms and research groups.
 
 New to the project? [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) explains all of it in
-plain English.
+plain English. To show it to someone, follow [docs/DEMO.md](docs/DEMO.md).
 
 ## What is built
 
