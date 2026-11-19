@@ -3,9 +3,10 @@
 A walkthrough of TopRanker in about fifteen minutes, in the order that tells the story
 best. It assumes a local install with demo data (`sh scripts/setup.sh`, see
 [PROJECT_GUIDE.md](PROJECT_GUIDE.md#9-running-it-on-your-own-computer)). The setup
-prints the demo logins once: the admin (your `ADMIN_EMAIL` and `ADMIN_PASSWORD`), the
-instructor `instructor@topranker.invalid` and the students `demo1@topranker.invalid`
-onwards, all sharing one generated password.
+prints the demo logins once: the admin `admin@example.org`, the instructor
+`instructor@example.org` and the students `demo1@example.org` to `demo8@example.org`,
+all sharing one generated password. The demo data already holds courses, contests, tests
+and contributed problems, so each step below can also be shown on existing entries.
 
 The AI steps need `GROQ_API_KEY` or `GEMINI_API_KEY` in `.env`. Without them the rest of
 the demo works and the AI buttons say the features are off.
@@ -21,7 +22,7 @@ the demo works and the AI buttons say the features are off.
 
 ## 2. Submitting and judging (student, 4 minutes)
 
-1. Sign in as `demo1@topranker.invalid`.
+1. Sign in as `demo1@example.org`.
 2. On **STD-001**, pick a dimension, start from a template in the editor and submit.
    Note the quota line (cooldown and daily cap).
 3. The submission page follows the judge live: 3 instances x 5 seeds, each run in its
@@ -51,7 +52,7 @@ the demo works and the AI buttons say the features are off.
 
 ## 4. Teaching (instructor, 4 minutes)
 
-1. Sign in as `instructor@topranker.invalid`.
+1. Sign in as `instructor@example.org`.
 2. **Courses**: create a course and copy its invite code. In a second browser window,
    sign in as a student and join with the code. The instructor dashboard lists every
    student's progress.

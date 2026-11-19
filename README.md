@@ -13,7 +13,9 @@ problem instances, and ranks algorithms by server-side results.
   permanent platform for classrooms and research groups.
 
 New to the project? [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) explains all of it in
-plain English. To show it to someone, follow [docs/DEMO.md](docs/DEMO.md).
+plain English. To run and test it on your own laptop step by step, follow
+[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md). To show it to someone, follow
+[docs/DEMO.md](docs/DEMO.md).
 
 ## What is built
 
@@ -109,15 +111,18 @@ sh scripts/setup.sh
 ```
 
 This builds the sandbox image, starts all services, applies migrations and seeds the
-catalogue, the baselines on every problem and a set of demo users. Seeding judges about
-250 submissions and takes 10 to 20 minutes. Demo logins are printed once at the end.
+catalogue, the baselines on every problem and demo data: users with judged submissions,
+courses, contests, tests and contributed problems (see
+[GETTING_STARTED.md](docs/GETTING_STARTED.md#5-what-the-demo-data-contains)). Seeding
+judges about 250 submissions and takes 10 to 20 minutes. Demo logins are printed once at
+the end.
 
 - App: http://localhost:3000
 - API documentation: http://localhost:8000/docs
 
 To start without demo data, run `docker compose up -d --build --wait` and then
 `docker compose exec backend python ../scripts/seed.py`. `scripts/reset.py` removes the
-demo users and their submissions.
+demo users and everything they created.
 
 ### Windows without Docker Desktop
 
