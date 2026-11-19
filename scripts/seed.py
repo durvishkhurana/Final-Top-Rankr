@@ -2,11 +2,13 @@
 
     python scripts/seed.py                 catalogue, reference values, first admin
     python scripts/seed.py --baselines     also judge the three baselines on every problem
-    python scripts/seed.py --demo          also create demo users with judged submissions
+    python scripts/seed.py --demo          also create demo users with judged submissions,
+                                           courses, contests, tests and contributed problems
 
 Baseline and demo submissions are built-in, trusted code, so they are judged as plain
 local processes (no container) to keep seeding fast. Their scores are real results of
-real runs. Demo users are flagged is_demo and removed by scripts/reset.py.
+real runs. Demo users are flagged is_demo and removed by scripts/reset.py. The demo
+activity (courses, contests, tests, contributions) is created by scripts/demo_data.py.
 """
 
 import argparse
@@ -18,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path[:0] = [str(ROOT / "backend"), str(ROOT)]  # backend packages and worker/
 
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -55,7 +57,14 @@ DEMO_PEOPLE = [
     ("Sofia Demo", "student", "Spain", "Universidad de Ejemplo"),
     ("Kenji Demo", "student", "Japan", "Example Institute"),
     ("Grace Demo", "student", "Kenya", "Example Institute"),
+    ("Demo Admin", "admin", "India", "Demo Institute of Technology"),
 ]
+STUDENTS = [f"demo{i}@example.org" for i, p in enumerate(DEMO_PEOPLE) if p[1] == "student"]
+
+
+def demo_email(i: int, role: str) -> str:
+    name = {"instructor": "instructor", "admin": "admin"}.get(role, f"demo{i}")
+    return f"{name}@example.org"
 
 
 async def judge_and_store(session: AsyncSession, user: User, problem_id: str, dim: int,
@@ -100,9 +109,9 @@ async def seed_demo(session: AsyncSession) -> str | None:
     problem_ids = sorted(PROBLEMS)
     now = datetime.now(UTC)
     for i, (name, role, country, institution) in enumerate(DEMO_PEOPLE):
-        user = User(email=f"demo{i}@topranker.invalid" if i else "instructor@topranker.invalid",
-                    name=name, role=role, country=country, institution=institution,
-                    password_hash=hashed, is_demo=True, email_verified=True)
+        user = User(email=demo_email(i, role), name=name, role=role, country=country,
+                    institution=institution, password_hash=hashed, is_demo=True,
+                    email_verified=True)
         session.add(user)
         await session.commit()
         if role != "student":
@@ -134,6 +143,12 @@ async def main() -> None:
         if args.baselines:
             await seed_baselines(session)
         demo_password = await seed_demo(session) if args.demo else None
+    activity: dict[str, str] = {}
+    if demo_password:
+        from demo_data import seed_activity  # loads the whole API app, so only when needed
+        print("Creating courses, contests, tests and contributed problems...")
+        activity = await seed_activity(demo_password, STUDENTS, demo_email(0, "instructor"),
+                                       demo_email(0, "admin"))
 
     s = get_settings()
     print(f"\nFrontend: {s.frontend_url}\nAPI docs: http://localhost:8000/docs")
@@ -141,9 +156,11 @@ async def main() -> None:
         print(f"Admin login: {admin.email} / the ADMIN_PASSWORD value in .env")
     if demo_password:
         print("Demo logins (shown once, not stored anywhere):")
-        print(f"  instructor@topranker.invalid / {demo_password}")
-        print(f"  demo1@topranker.invalid ... demo{len(DEMO_PEOPLE) - 1}@topranker.invalid "
-              f"/ {demo_password}")
+        print(f"  instructor@example.org / {demo_password}")
+        print(f"  admin@example.org / {demo_password}")
+        print(f"  {STUDENTS[0]} ... {STUDENTS[-1]} / {demo_password}")
+        for label, value in activity.items():
+            print(f"{label}: {value}")
 
 
 if __name__ == "__main__":
