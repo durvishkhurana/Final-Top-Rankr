@@ -5,11 +5,11 @@ from typing import Any, Literal
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from db.models import Problem, Run, Submission, User
+from db.models import Contribution, Problem, Run, Submission, User
 
 from ..deps import Session
 from ..ratings import user_ratings
-from ..schemas import DayCount, GlobalRow, ProblemCount, Stats
+from ..schemas import DayCount, GlobalRow, ProblemCount, SetterRow, Stats
 
 router = APIRouter(tags=["leaderboard"])
 
@@ -32,6 +32,39 @@ async def global_leaderboard(session: Session,
     ordered = sorted(groups.items(), key=lambda kv: -sum(kv[1]) / len(kv[1]))
     return [GlobalRow(rank=i, key=key, name=key, rating=sum(v) / len(v), members=len(v))
             for i, (key, v) in enumerate(ordered, start=1)]
+
+
+@router.get("/leaderboard/setters", response_model=list[SetterRow])
+async def setter_leaderboard(session: Session) -> list[SetterRow]:
+    """People ranked by their approved problems that are live, then by how many people
+    have had a submission judged on them."""
+    owned = (await session.execute(
+        select(Contribution.user_id, Contribution.problem_id)
+        .join(Problem, Problem.id == Contribution.problem_id)
+        .where(Contribution.status == "approved", Problem.is_active))).all()
+    if not owned:
+        return []
+    usage = (await session.execute(
+        select(Submission.problem_id, Submission.user_id)
+        .join(User, User.id == Submission.user_id)
+        .where(Submission.problem_id.in_({p for _, p in owned}),
+               Submission.status == "done", User.is_bot.is_(False)))).all()
+    by_problem: dict[str, list[int]] = defaultdict(list)
+    for problem_id, user_id in usage:
+        by_problem[problem_id].append(user_id)
+    problems: dict[int, set[str]] = defaultdict(set)
+    for owner, pid in owned:
+        if pid:  # always set once approved; the join already requires it
+            problems[owner].add(pid)
+    users = {u.id: u for u in await session.scalars(select(User).where(User.id.in_(problems)))}
+    rows = []
+    for user_id, ids in problems.items():
+        tries = [u for p in ids for u in by_problem[p] if u != user_id]
+        rows.append((len(ids), len(set(tries)), len(tries), users[user_id]))
+    rows.sort(key=lambda r: (-r[0], -r[1], -r[2], r[3].name))
+    return [SetterRow(rank=i, user_id=u.id, name=u.name, country=u.country,
+                      institution=u.institution, problems=n, solvers=s, submissions=t)
+            for i, (n, s, t, u) in enumerate(rows, start=1)]
 
 
 @router.get("/stats", response_model=Stats)

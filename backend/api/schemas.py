@@ -212,6 +212,17 @@ class SubmissionDetail(SubmissionOut):
 # --- leaderboard / stats / admin --------------------------------------------------------
 
 
+class SetterRow(BaseModel):
+    rank: int
+    user_id: int
+    name: str
+    country: str = ""
+    institution: str = ""
+    problems: int  # approved contributions that are live in the catalogue
+    solvers: int  # distinct people (not baselines) with a judged submission on them
+    submissions: int  # judged submissions on them
+
+
 class GlobalRow(BaseModel):
     rank: int
     key: str  # user id, country or institution

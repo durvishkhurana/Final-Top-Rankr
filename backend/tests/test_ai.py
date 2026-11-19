@@ -170,6 +170,15 @@ async def test_contribution_smoke_test_approval_and_judging(
     assert sub["status"] == "done", sub["error"]
     assert sub["score"] is not None and all(r["status"] == "ok" for r in sub["runs"])
 
+    # problem-setter board: the setter's own submissions do not count as solvers
+    setters = (await client.get("/api/leaderboard/setters")).json()
+    assert [(s["name"], s["problems"], s["solvers"]) for s in setters] == [("Ada", 1, 0)]
+    async with await other_client() as bob:
+        await signup(bob, "bob")
+        await submit(bob, queued, "C-001", RANDOM)
+    row = (await client.get("/api/leaderboard/setters")).json()[0]
+    assert (row["rank"], row["solvers"], row["submissions"]) == (1, 1, 1)
+
 
 async def test_problem_builder_uses_gemini_for_images(
         client: AsyncClient, jobs: list[tuple[str, int]], fake: Fake) -> None:

@@ -37,7 +37,8 @@ the demo works and the AI buttons say the features are off.
 
 ## 3. Leaderboards and research (2 minutes)
 
-1. **Leaderboard**: global rating by person, country and institution. **Statistics**:
+1. **Leaderboard**: global rating by person, country and institution, and the
+   problem setters. **Statistics**:
    platform totals. Click a name to open a profile with its activity heatmap.
 2. **Research**: choose STD-001 and a dimension, keep the default selection (top three
    people and the baselines) and press **Compare**. Walk through the mean AOCC with

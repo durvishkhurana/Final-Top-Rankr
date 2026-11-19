@@ -53,7 +53,8 @@ algorithms instead of programs or models.
   picture demos (D2-001 to D2-004) and three are real-world puzzles (exam timetabling,
   bus-stop placement and delivery routing).
 - See **leaderboards** per problem, a **global leaderboard** (by person, country or
-  institution), a **statistics** page and public **profiles**.
+  institution), a board of **problem setters** whose contributed problems were approved,
+  a **statistics** page and public **profiles**.
 - Open any judged submission and see its score, its **convergence chart** (how fast it
   improved) and every run. The code itself stays private.
 - Use the **research page** to compare entries with proper statistics, and **download**
