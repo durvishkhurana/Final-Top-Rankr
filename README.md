@@ -27,7 +27,7 @@ plain English. To show it to someone, follow [docs/DEMO.md](docs/DEMO.md).
   confirmation, password reset and a sign-in lock after repeated wrong passwords; problem
   catalogue; code submission with an in-browser editor and starter templates; live run
   status; per-submission convergence chart and run table; per-problem leaderboards with
-  baselines; global leaderboards by person, country and institution; statistics page;
+  baselines; global leaderboards by person, country and institution, and of problem setters; statistics page;
   user profiles; an admin page for roles, problem visibility and baseline runs.
 - **Visuals.** Convergence chart with the top three entries and the baselines overlaid;
   an animated replay of the search on the 2D demo landscapes; the best timetable, stop

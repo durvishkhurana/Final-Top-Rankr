@@ -146,6 +146,17 @@ export interface SubmissionDetail extends Submission {
   runs: Run[];
 }
 
+export interface SetterRow {
+  rank: number;
+  user_id: number;
+  name: string;
+  country: string;
+  institution: string;
+  problems: number;
+  solvers: number;
+  submissions: number;
+}
+
 export interface GlobalRow {
   rank: number;
   key: string;
