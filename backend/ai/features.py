@@ -122,3 +122,8 @@ def run_stats(sub: Submission, runs: list[Run]) -> dict[str, Any]:
             [last_improvement(r) for r in ok]),
         "score_out_of_1000": sub.score,
     }
+
+
+class WriteUp(BaseModel):
+    text: str = Field(description="Two or three short paragraphs of plain prose, with no "
+                                  "digits; refer to entries only by their letters")

@@ -68,6 +68,7 @@ export function ChallengerPanel({ problemId, dim }: { problemId: string; dim: nu
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">Generation {g.number}</span>
               {g.is_champion && <Badge>champion</Badge>}
+              {g.parent != null && <span className="text-xs text-muted-foreground">from generation {g.parent}</span>}
               {g.status !== "done" && <Badge variant="outline">{g.status}</Badge>}
               <span className="tabular-nums">{g.score != null && `score ${fmtScore(g.score)}`}</span>
               <span className="ml-auto text-xs text-muted-foreground">{fmtDate(g.created_at)}</span>

@@ -56,7 +56,9 @@ plain English.
   one problem: mean AOCC with bootstrap confidence intervals, mean ranks and a Friedman
   test over the shared runs, pairwise Mann-Whitney U tests with Holm's correction and
   the A12 effect size, and COCO-style runtime distributions (ECDF). Every submission's
-  runs, every leaderboard and every contest ranking can be downloaded as CSV or JSON.
+  runs, every leaderboard and every contest ranking can be downloaded as CSV or JSON;
+  a comparison also as a LaTeX table and an IOHanalyzer zip, with an optional
+  AI-drafted results paragraph that holds no numbers.
   See [docs/RESEARCH.md](docs/RESEARCH.md).
 - **Contributed problems.** Users propose fitness functions; each is smoke-tested in a
   sandbox container and reviewed by an admin before it joins the catalogue.

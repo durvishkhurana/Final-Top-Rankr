@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -12,7 +12,7 @@ import { PALETTE } from "@/components/solution-view";
 import { Empty, ErrorNote, Loading, PageTitle } from "@/components/state";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { api } from "@/lib/api";
+import { api, post } from "@/lib/api";
 import { evalTicks, fmtScore } from "@/lib/format";
 import type { BoardRow, Comparison } from "@/lib/types";
 
@@ -81,19 +81,53 @@ function Ecdf({ data }: { data: Comparison }) {
   );
 }
 
+/** Results paragraph written by the model from the verdicts; the numbers stay in the tables. */
+function WriteUp({ query }: { query: string }) {
+  const write = useMutation({ mutationFn: () => post<{ text: string }>(`/research/writeup?${query}`) });
+  return (
+    <section>
+      <h2 className="mb-2 text-lg font-medium">Write-up</h2>
+      {write.data ? (
+        <div className="space-y-2 text-sm">
+          {write.data.text.split(/\n+/).map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            AI-written from the test verdicts above. It contains no numbers by design; check it against the tables.
+          </p>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" disabled={write.isPending} onClick={() => write.mutate()}>
+          {write.isPending ? "Writing…" : "Draft a results paragraph"}
+        </Button>
+      )}
+      {write.error && <ErrorNote error={write.error} />}
+    </section>
+  );
+}
+
 function Results({ data }: { data: Comparison }) {
   const name = Object.fromEntries(data.entries.map((e) => [e.submission_id, e.label]));
+  const query = `problem_id=${data.problem_id}&dim=${data.dim}&${data.entries
+    .map((e) => `ids=${e.submission_id}`)
+    .join("&")}`;
   return (
     <div className="space-y-8">
       <section>
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-medium">Summary</h2>
-          <Downloads
-            path={`/research/runs?problem_id=${data.problem_id}&dim=${data.dim}&${data.entries
-              .map((e) => `ids=${e.submission_id}`)
-              .join("&")}`}
-            label="All runs:"
-          />
+          <span className="flex flex-wrap gap-3">
+            <Downloads path={`/research/runs?${query}`} label="All runs:" />
+            <span className="text-sm text-muted-foreground">
+              <a href={`/api/research/latex?${query}`} download className="text-foreground underline">
+                LaTeX
+              </a>
+              {" · "}
+              <a href={`/api/research/ioh?${query}`} download className="text-foreground underline">
+                IOHanalyzer
+              </a>
+            </span>
+          </span>
         </div>
         <Table>
           <TableHeader>
@@ -169,6 +203,8 @@ function Results({ data }: { data: Comparison }) {
         <h2 className="mb-2 text-lg font-medium">Runtime distribution (ECDF)</h2>
         <Ecdf data={data} />
       </section>
+
+      <WriteUp query={query} />
     </div>
   );
 }

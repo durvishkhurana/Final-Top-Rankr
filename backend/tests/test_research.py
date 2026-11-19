@@ -1,5 +1,7 @@
 import csv
 import io
+import json
+import zipfile
 from typing import Any
 
 import numpy as np
@@ -9,8 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from judge import baselines
 from judge.scoring import checkpoints
-from research import stats
+from research import export, stats
 
+from .test_ai import Fake, fake  # noqa: F401
 from .test_api import RANDOM, other_client, signup, submit
 from .test_contests import contest_body, enter, make
 
@@ -94,6 +97,17 @@ async def test_compare_and_export_judged_submissions(client: AsyncClient,
     last = f"precision_at_{checkpoints(strong['budget'])[-1]}"
     assert float(rows[0][last]) == pytest.approx(float(rows[0]["precision"]))
 
+    r = await client.get("/api/research/latex", params=ids)
+    assert r.status_code == 200 and "STD-001-d5.tex" in r.headers["content-disposition"]
+    assert r"\toprule" in r.text and r"\textbf{" in r.text.split("Bob")[1].split(r"\\")[0]
+
+    r = await client.get("/api/research/ioh", params=ids)
+    zf = zipfile.ZipFile(io.BytesIO(r.content))
+    meta = json.loads(zf.read("Bob/IOHprofiler_f1_STD_001.json"))
+    assert meta["algorithm"]["name"] == "Bob" and len(meta["scenarios"][0]["runs"]) == 15
+    dat = zf.read("Bob/data_f1_STD_001/IOHprofiler_f1_DIM5.dat").decode()
+    assert dat.count("evaluations raw_y") == 15
+
     r = await client.get(f"/api/submissions/{strong['id']}/export", params={"format": "json"})
     runs = r.json()
     assert len(runs) == 15 and "code" not in runs[0] and "log" not in runs[0]
@@ -117,3 +131,29 @@ async def test_contest_ranking_export(client: AsyncClient, queued: list[int],
     rows = list(csv.DictReader(io.StringIO(r.text)))
     assert list(rows[0])[-2:] == ["STD-001@5", "TR-001@5"]
     assert rows[0]["name"] == "Ada" and rows[0]["TR-001@5"] == "" and rows[0]["final"] == "False"
+
+
+def test_ioh_rows_keep_improvements_only_and_end_at_the_last_evaluation() -> None:
+    points = checkpoints(1000)
+    trace: list[float | None] = [10.0, 10.0, 5.0, None] + [1.0] * (len(points) - 4)
+    rows = export.improvements(1000, 990, trace)
+    assert [y for _, y in rows] == [10.0, 5.0, 1.0, 1.0] and rows[-1][0] == 990
+    assert rows[0][0] == points[0] and rows[1][0] == points[2]
+
+
+@pytest.mark.anyio
+async def test_writeup_names_entries_and_drops_numbers(client: AsyncClient, queued: list[int],
+                                                       fake: Fake) -> None:  # noqa: F811
+    await signup(client, "ada")
+    weak = await submit(client, queued, "STD-001", RANDOM)
+    strong = await submit(client, queued, "STD-001", CMAES)
+    params: dict[str, Any] = {"problem_id": "STD-001", "dim": 5, "ids": [weak["id"], strong["id"]]}
+    text = "[B] performed best. It won by 0.4 AOCC. [A] trailed with a large effect."
+    fake.gemini.append(json.dumps({"text": text}))
+    fake.groq.append(json.dumps({"text": text}))
+    r = await client.post("/api/research/writeup", params=params)
+    assert r.status_code == 200, r.text
+    assert r.json()["text"] == "Ada performed best. Ada trailed with a large effect."
+    prompt = fake.prompt()
+    assert '"B is significantly better"' in prompt and "Ada" not in prompt
+    assert '"order_by_mean_aocc_best_first": [\n  "B",' in prompt

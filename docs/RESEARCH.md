@@ -45,6 +45,13 @@ Every table is offered as CSV (for spreadsheets, R or pandas) and JSON. Add
 | Problem leaderboard | `GET /api/problems/{id}/leaderboard/export?dim=` | `rank, user_id, name, country, institution, is_baseline, submission_id, score, median_precision, iqr, submitted_at` |
 | Contest ranking | `GET /api/contests/{id}/leaderboard/export` | `rank, user_id, name, is_baseline, final, total`, then one column per task (`problem@dim`) |
 
+Two more formats are offered for a comparison on the research page:
+
+| What | Endpoint | Contents |
+|---|---|---|
+| LaTeX table | `GET /api/research/latex?problem_id=&dim=&ids=&ids=` | A `booktabs` table: runs, mean AOCC with its 95% interval, median and mean rank per entry; the best mean is bold. Needs `\usepackage{booktabs}` |
+| IOHanalyzer | `GET /api/research/ioh?problem_id=&dim=&ids=&ids=` | A zip with one folder per entry in the IOHprofiler format (a `.json` file and a `.dat` file of improvements). `raw_y` is the precision, so the target is 0. Upload the zip to IOHanalyzer to get its fixed-target and fixed-budget plots |
+
 Code, logs and error messages are never included in an export. The download links are
 on the submission page (Runs), the problem page (Leaderboard tab), the contest page and
 the research page.

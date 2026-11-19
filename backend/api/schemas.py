@@ -621,6 +621,10 @@ class Comparison(BaseModel):
     alpha: float
 
 
+class WriteUpOut(BaseModel):
+    text: str
+
+
 # --- AI challenger ----------------------------------------------------------------------
 
 
@@ -638,6 +642,7 @@ class GenerationOut(BaseModel):
     submission_id: int | None
     score: float | None
     is_champion: bool
+    parent: int | None  # number of the generation it was written from
     created_at: datetime
 
 
